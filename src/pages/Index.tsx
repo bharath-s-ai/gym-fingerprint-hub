@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -197,8 +198,10 @@ const Index = () => {
         </div>
 
         {/* Footer */}
-        <div className="bg-background/50 p-4 text-center text-muted-foreground text-xs">
-          Powered by F2F Gym Management System
+        <div className="bg-background/50 p-4 text-center">
+          <Link to="/dashboard" className="text-muted-foreground text-xs hover:text-primary transition-colors">
+            📊 Member Dashboard
+          </Link>
         </div>
       </div>
     </div>
