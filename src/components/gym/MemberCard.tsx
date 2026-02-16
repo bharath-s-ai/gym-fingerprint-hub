@@ -23,11 +23,11 @@ export function MemberCard({ member }: MemberCardProps) {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="glass-card rounded-2xl p-5 space-y-3"
+      className="glass-card rounded-lg p-5 space-y-3 border-l-2 border-l-primary"
     >
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center">
-          <User className="w-6 h-6 text-primary-foreground" />
+        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          <User className="w-6 h-6 text-primary" />
         </div>
         <div>
           <h3 className="font-bold text-foreground text-lg">{member.name}</h3>
@@ -45,7 +45,7 @@ export function MemberCard({ member }: MemberCardProps) {
         </div>
         <div className={`flex items-center gap-1.5 font-semibold ${isExpired ? "text-destructive" : "text-success"}`}>
           <Shield className="w-4 h-4" />
-          <span>{isExpired ? "Expired" : "Active"}</span>
+          <span>{isExpired ? "EXPIRED" : "ACTIVE"}</span>
         </div>
       </div>
     </motion.div>
