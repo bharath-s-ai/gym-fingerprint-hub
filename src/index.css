@@ -6,58 +6,50 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
 
-    --card: 217 33% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 217 33% 17%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 270 60% 52%;
+    --secondary: 0 0% 0%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 217 33% 22%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
 
-    --accent: 270 50% 40%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 0%;
 
-    --destructive: 350 89% 60%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 160 84% 39%;
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 10%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 6%;
 
-    --border: 217 33% 25%;
-    --input: 217 33% 25%;
-    --ring: 239 84% 67%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 25 95% 53%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%), hsl(270 60% 52%));
-    --gradient-bg: linear-gradient(135deg, hsl(222 47% 11%), hsl(270 30% 15%), hsl(222 47% 11%));
-    --gradient-success: linear-gradient(135deg, hsl(160 84% 39%), hsl(174 84% 32%));
-    --gradient-glass: linear-gradient(135deg, hsla(217 33% 17% / 0.6), hsla(217 33% 17% / 0.3));
-
-    --shadow-glow: 0 0 40px -10px hsl(239 84% 67% / 0.4);
-    --shadow-card: 0 25px 50px -12px hsl(0 0% 0% / 0.5);
-
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 239 84% 67%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 50% 40%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 217 33% 25%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 25 95% 53%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 25 95% 53%;
   }
 }
 
@@ -74,57 +66,70 @@
 
 @layer components {
   .glass-card {
-    @apply bg-card/50 backdrop-blur-xl border border-border/50 shadow-2xl;
+    @apply bg-black/60 backdrop-blur-xl border border-orange-500/15;
   }
 
-  .gradient-primary {
-    background: var(--gradient-primary);
+  .glass-card-hover {
+    @apply glass-card transition-all duration-200;
+  }
+
+  .glass-card-hover:hover {
+    border-color: rgba(249, 115, 22, 0.4);
+    box-shadow: 0 0 30px rgba(249, 115, 22, 0.15);
   }
 
   .gradient-bg {
-    background: var(--gradient-bg);
-  }
-
-  .gradient-success {
-    background: var(--gradient-success);
-  }
-
-  .glow-primary {
-    box-shadow: var(--shadow-glow);
-  }
-
-  .text-gradient {
-    @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-primary);
+    background: linear-gradient(180deg, #050505 0%, #111111 100%);
   }
 }
 
 @layer utilities {
-  @keyframes scan-line {
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  @keyframes ring-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.08); opacity: 0.7; }
+  }
+
+  @keyframes scan-sweep {
     0% { top: 0%; opacity: 1; }
     100% { top: 100%; opacity: 0.5; }
   }
 
-  @keyframes pulse-ring {
-    0% { transform: scale(1); opacity: 0.5; }
-    50% { transform: scale(1.08); opacity: 1; }
-    100% { transform: scale(1); opacity: 0.5; }
+  @keyframes rotate-border {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
+  .animate-shimmer {
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
   }
 
-  .animate-scan-line {
-    animation: scan-line 1.5s linear infinite;
+  .animate-shake {
+    animation: shake 0.3s ease-in-out;
   }
 
-  .animate-pulse-ring {
-    animation: pulse-ring 2s ease-in-out infinite;
+  .animate-ring-pulse {
+    animation: ring-pulse 1.5s ease-in-out infinite;
   }
 
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
+  .animate-scan-sweep {
+    animation: scan-sweep 1.5s linear infinite;
+  }
+
+  .animate-rotate-border {
+    animation: rotate-border 2s linear infinite;
   }
 }

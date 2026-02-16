@@ -26,13 +26,13 @@ export function EnrollmentForm({ onSubmit, isProcessing }: EnrollmentFormProps) 
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           disabled={isProcessing}
-          className="pl-10 bg-background/50 border-border/50 h-12 text-foreground placeholder:text-muted-foreground"
+          className="pl-10 bg-muted/50 border-border h-14 text-foreground placeholder:text-muted-foreground text-lg focus:border-primary focus:shadow-[0_0_0_3px_hsl(25_95%_53%/0.1)]"
         />
       </div>
       <Button
         type="submit"
         disabled={isProcessing || !phone.trim()}
-        className="gradient-primary text-primary-foreground h-12 px-6 font-semibold hover:opacity-90 transition-opacity"
+        className="bg-primary text-primary-foreground h-14 px-8 font-bold text-lg uppercase tracking-wider hover:bg-primary/90 hover:scale-105 hover:shadow-[0_0_20px_hsl(25_95%_53%/0.25)] transition-all duration-200"
       >
         {isProcessing ? "Processing..." : "Enroll"}
       </Button>

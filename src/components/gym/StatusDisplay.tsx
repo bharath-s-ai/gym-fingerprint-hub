@@ -27,10 +27,10 @@ export function StatusDisplay({ message, type }: StatusDisplayProps) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.3 }}
-        className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${className}`}
+        className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${className}`}
       >
         <Icon className={`w-5 h-5 shrink-0 ${type === "waiting" ? "animate-spin" : ""}`} />
-        <span className="text-sm font-medium">{message}</span>
+        <span className="text-sm font-semibold uppercase tracking-wide">{message}</span>
       </motion.div>
     </AnimatePresence>
   );
