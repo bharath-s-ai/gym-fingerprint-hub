@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { FingerprintScanner } from "@/components/gym/FingerprintScanner";
@@ -9,6 +9,8 @@ import { MemberCard } from "@/components/gym/MemberCard";
 import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
 import { useFingerprint } from "@/hooks/useFingerprint";
 import { Button } from "@/components/ui/button";
+import { HiddenAdminCorner, IdleCountdownModal } from "@/components/gym/KioskControls";
+import { Fingerprint } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
 
 interface Status {
@@ -28,6 +30,7 @@ interface Member {
 }
 
 const IDLE_TIMEOUT = 30000;
+const COUNTDOWN_START = 10;
 
 const Index = () => {
   const [mode, setMode] = useState<"enrollment" | "checkin">("checkin");
@@ -36,13 +39,32 @@ const Index = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerStatus, setScannerStatus] = useState<"idle" | "success" | "error">("idle");
   const [isIdle, setIsIdle] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
+  const countdownTimer = useRef<ReturnType<typeof setInterval>>();
   const { initialize, capture, match } = useFingerprint();
+  const navigate = useNavigate();
 
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
+    setCountdown(0);
     clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setIsIdle(true), IDLE_TIMEOUT);
+    clearInterval(countdownTimer.current);
+    idleTimer.current = setTimeout(() => {
+      // Start countdown
+      let sec = COUNTDOWN_START;
+      setCountdown(sec);
+      countdownTimer.current = setInterval(() => {
+        sec--;
+        if (sec <= 0) {
+          clearInterval(countdownTimer.current);
+          setCountdown(0);
+          setIsIdle(true);
+        } else {
+          setCountdown(sec);
+        }
+      }, 1000);
+    }, IDLE_TIMEOUT - COUNTDOWN_START * 1000);
   }, []);
 
   useEffect(() => {
@@ -52,6 +74,7 @@ const Index = () => {
     return () => {
       events.forEach((e) => window.removeEventListener(e, resetIdleTimer));
       clearTimeout(idleTimer.current);
+      clearInterval(countdownTimer.current);
     };
   }, [resetIdleTimer]);
 
@@ -188,6 +211,13 @@ const Index = () => {
       >
         <img src={logo} alt="F2F Logo" className="w-40 h-40 object-contain mb-8" />
         <motion.div
+          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          className="mb-8"
+        >
+          <Fingerprint className="w-24 h-24 text-primary" />
+        </motion.div>
+        <motion.div
           animate={{ scale: [1, 1.05, 1], opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -200,7 +230,10 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen gradient-bg flex items-center justify-center p-6">
+    <div className="min-h-screen gradient-bg flex items-center justify-center p-6 relative">
+      <HiddenAdminCorner onUnlock={() => navigate("/dashboard")} />
+      <IdleCountdownModal secondsLeft={countdown} onDismiss={resetIdleTimer} />
+
       <motion.div
         initial={{ opacity: 0, x: 30 }}
         animate={{ opacity: 1, x: 0 }}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,14 +6,13 @@ import { ArrowLeft, Users, Fingerprint, Calendar, Search, X } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
+import { MemberProfilePanel } from "@/components/gym/MemberProfilePanel";
+import { AttendanceAnalytics } from "@/components/gym/AttendanceAnalytics";
+import { DataExport } from "@/components/gym/DataExport";
+import { FullscreenToggle } from "@/components/gym/KioskControls";
 import logo from "@/assets/f2f-logo.jpg";
 
 interface Member {
@@ -57,73 +56,51 @@ const Dashboard = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      const { data: membersData } = await supabase
-        .from("members")
-        .select("*")
-        .order("name");
+  const fetchMembers = useCallback(async () => {
+    const { data: membersData } = await supabase
+      .from("members")
+      .select("*")
+      .order("name");
 
-      if (!membersData) {
-        setLoading(false);
-        return;
-      }
+    if (!membersData) { setLoading(false); return; }
 
-      const enriched = await Promise.all(
-        membersData.map(async (m) => {
-          const { count } = await supabase
-            .from("attendance")
-            .select("*", { count: "exact", head: true })
-            .eq("member_id", m.id);
+    const enriched = await Promise.all(
+      membersData.map(async (m) => {
+        const { count } = await supabase
+          .from("attendance")
+          .select("*", { count: "exact", head: true })
+          .eq("member_id", m.id);
 
-          const { data: lastAttendance } = await supabase
-            .from("attendance")
-            .select("check_in")
-            .eq("member_id", m.id)
-            .order("check_in", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        const { data: lastAttendance } = await supabase
+          .from("attendance")
+          .select("check_in")
+          .eq("member_id", m.id)
+          .order("check_in", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-          return {
-            ...m,
-            attendance_count: count || 0,
-            last_check_in: lastAttendance?.check_in || null,
-          };
-        })
-      );
+        return { ...m, attendance_count: count || 0, last_check_in: lastAttendance?.check_in || null };
+      })
+    );
 
-      setMembers(enriched);
-      setLoading(false);
-    };
-
-    fetchMembers();
+    setMembers(enriched);
+    setLoading(false);
   }, []);
 
+  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+
   const filtered = members.filter(
-    (m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.phone.includes(search)
+    (m) => m.name.toLowerCase().includes(search.toLowerCase()) || m.phone.includes(search)
   );
 
   const isExpired = (date: string) => new Date(date) < new Date();
 
   const stats = [
-    {
-      icon: Users,
-      label: "ACTIVE MEMBERS",
-      value: members.filter((m) => m.active && !isExpired(m.expiry_date)).length,
-    },
-    {
-      icon: Fingerprint,
-      label: "ENROLLED",
-      value: members.filter((m) => m.fingerprint_template).length,
-    },
-    {
-      icon: Calendar,
-      label: "EXPIRED",
-      value: members.filter((m) => isExpired(m.expiry_date)).length,
-    },
+    { icon: Users, label: "ACTIVE MEMBERS", value: members.filter((m) => m.active && !isExpired(m.expiry_date)).length },
+    { icon: Fingerprint, label: "ENROLLED", value: members.filter((m) => m.fingerprint_template).length },
+    { icon: Calendar, label: "EXPIRED", value: members.filter((m) => isExpired(m.expiry_date)).length },
   ];
 
   return (
@@ -150,6 +127,7 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
+          <FullscreenToggle />
         </div>
 
         {/* Stats */}
@@ -157,13 +135,7 @@ const Dashboard = () => {
           {loading
             ? Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)
             : stats.map((stat, i) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1, duration: 0.3 }}
-                  className="glass-card-hover rounded-lg p-5 flex items-center gap-4"
-                >
+                <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1, duration: 0.3 }} className="glass-card-hover rounded-lg p-5 flex items-center gap-4">
                   <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center">
                     <stat.icon className="w-7 h-7 text-primary" />
                   </div>
@@ -175,20 +147,28 @@ const Dashboard = () => {
               ))}
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Search warriors by name or phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-12 bg-muted/50 border-border h-14 text-lg focus:border-primary focus:shadow-[0_0_0_3px_hsl(25_95%_53%/0.1)]"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <X className="w-5 h-5" />
-            </button>
-          )}
+        {/* Attendance Analytics */}
+        <AttendanceAnalytics />
+
+        {/* Search + Export */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search warriors by name or phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-12 bg-muted/50 border-border h-14 text-lg focus:border-primary focus:shadow-[0_0_0_3px_hsl(25_95%_53%/0.1)]"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          <div className="lg:w-80">
+            <DataExport />
+          </div>
         </div>
 
         {/* Table */}
@@ -197,21 +177,14 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow className="border-primary/20 hover:bg-transparent">
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Name</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Phone</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Status</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Enrolled</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Expiry</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold text-right">Check-ins</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Last Visit</TableHead>
+                  {["Name", "Phone", "Status", "Enrolled", "Expiry", "Check-ins", "Last Visit"].map((h) => (
+                    <TableHead key={h} className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">{h}</TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
-              </TableBody>
+              <TableBody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}</TableBody>
             </Table>
           ) : filtered.length === 0 && members.length === 0 ? (
-            /* Empty state — no members */
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
               <div className="relative mb-6">
                 <Fingerprint className="w-20 h-20 text-muted-foreground/30" />
@@ -226,7 +199,6 @@ const Dashboard = () => {
               </Link>
             </div>
           ) : filtered.length === 0 ? (
-            /* Empty state — no search results */
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
               <Search className="w-16 h-16 text-muted-foreground/30 mb-4" />
               <h3 className="text-lg font-bold text-foreground mb-1">No Matches Found</h3>
@@ -239,13 +211,9 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow className="border-primary/20 hover:bg-transparent">
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Name</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Phone</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Status</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Enrolled</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Expiry</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold text-right">Check-ins</TableHead>
-                  <TableHead className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">Last Visit</TableHead>
+                  {["Name", "Phone", "Status", "Enrolled", "Expiry", "Check-ins", "Last Visit"].map((h) => (
+                    <TableHead key={h} className={`uppercase text-xs tracking-wider text-muted-foreground font-semibold ${h === "Check-ins" ? "text-right" : ""}`}>{h}</TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -255,43 +223,26 @@ const Dashboard = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05, duration: 0.3 }}
-                    className="border-border/30 hover:bg-primary/5 hover:border-l-2 hover:border-l-primary transition-all group"
+                    onClick={() => setSelectedMember(m)}
+                    className="border-border/30 hover:bg-primary/5 hover:border-l-2 hover:border-l-primary transition-all group cursor-pointer"
                   >
                     <TableCell className="font-bold text-foreground">{m.name}</TableCell>
                     <TableCell className="text-muted-foreground">{m.phone}</TableCell>
                     <TableCell>
                       {!m.active || isExpired(m.expiry_date) ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-destructive/20 text-destructive border border-destructive/30">
-                          EXPIRED
-                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-destructive/20 text-destructive border border-destructive/30">EXPIRED</span>
                       ) : m.fingerprint_template ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-success/20 text-success border border-success/30">
-                          ACTIVE
-                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-success/20 text-success border border-success/30">ACTIVE</span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-primary/20 text-primary border border-primary/30">
-                          PENDING
-                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-primary/20 text-primary border border-primary/30">PENDING</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {m.fingerprint_template ? (
-                        <Fingerprint className="w-5 h-5 text-primary" />
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
+                      {m.fingerprint_template ? <Fingerprint className="w-5 h-5 text-primary" /> : <span className="text-muted-foreground text-xs">—</span>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(m.expiry_date), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right font-black text-foreground text-lg">
-                      {m.attendance_count}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {m.last_check_in
-                        ? format(new Date(m.last_check_in), "MMM d, yyyy")
-                        : "—"}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{format(new Date(m.expiry_date), "MMM d, yyyy")}</TableCell>
+                    <TableCell className="text-right font-black text-foreground text-lg">{m.attendance_count}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{m.last_check_in ? format(new Date(m.last_check_in), "MMM d, yyyy") : "—"}</TableCell>
                   </motion.tr>
                 ))}
               </TableBody>
@@ -299,6 +250,13 @@ const Dashboard = () => {
           )}
         </div>
       </motion.div>
+
+      {/* Member Profile Panel */}
+      <MemberProfilePanel
+        member={selectedMember}
+        onClose={() => setSelectedMember(null)}
+        onUpdate={() => { setSelectedMember(null); fetchMembers(); }}
+      />
     </div>
   );
 };
