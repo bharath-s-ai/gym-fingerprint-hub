@@ -8,7 +8,10 @@ import { StatusDisplay, type StatusType } from "@/components/gym/StatusDisplay";
 import { MemberCard } from "@/components/gym/MemberCard";
 import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
 import { useFingerprint } from "@/hooks/useFingerprint";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { HiddenAdminCorner, IdleCountdownModal } from "@/components/gym/KioskControls";
 import { Fingerprint } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
@@ -40,10 +43,13 @@ const Index = () => {
   const [scannerStatus, setScannerStatus] = useState<"idle" | "success" | "error">("idle");
   const [isIdle, setIsIdle] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [enrollProgress, setEnrollProgress] = useState(0); // 0-3 samples
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
   const { initialize, capture, match } = useFingerprint();
+  const { play } = useSoundEffects();
   const navigate = useNavigate();
+  useKeyboardShortcuts({ onModeChange: setMode });
 
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
@@ -88,6 +94,8 @@ const Index = () => {
     setIsScanning(true);
     setMember(null);
     setScannerStatus("idle");
+    setEnrollProgress(0);
+    play("tap");
     setStatus({ message: "Looking up member...", type: "waiting" });
 
     try {
@@ -101,14 +109,17 @@ const Index = () => {
       if (!data) throw new Error("No member found with that phone number");
 
       setMember(data as Member);
-      setStatus({ message: "Place finger on scanner (1/3)...", type: "waiting" });
 
       const templates: string[] = [];
       for (let i = 0; i < 3; i++) {
+        setStatus({ message: `Place finger on scanner (${i + 1}/3)...`, type: "waiting" });
+        setEnrollProgress(i);
         const template = await capture();
         templates.push(template);
+        setEnrollProgress(i + 1);
+        play("tap");
         if (i < 2) {
-          setStatus({ message: `Place finger again (${i + 2}/3)...`, type: "waiting" });
+          setStatus({ message: `Sample ${i + 1} captured! Lift finger...`, type: "success" });
           await new Promise((r) => setTimeout(r, 1500));
         }
       }
@@ -119,20 +130,25 @@ const Index = () => {
         .eq("id", data.id);
 
       setScannerStatus("success");
+      setEnrollProgress(3);
+      play("success");
       setStatus({ message: "Fingerprint enrolled successfully!", type: "success" });
     } catch (error: any) {
       setScannerStatus("error");
+      setEnrollProgress(0);
+      play("error");
       setStatus({ message: error.message, type: "error" });
     } finally {
       setIsScanning(false);
     }
-  }, [capture]);
+  }, [capture, play]);
 
   const handleCheckIn = useCallback(async () => {
     if (isScanning) return;
     setIsScanning(true);
     setMember(null);
     setScannerStatus("idle");
+    play("tap");
     setStatus({ message: "Place finger on scanner...", type: "waiting" });
 
     try {
@@ -156,6 +172,7 @@ const Index = () => {
 
       if (!matched) {
         setScannerStatus("error");
+        play("error");
         setStatus({ message: "Fingerprint not recognized", type: "error" });
         setTimeout(() => { setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 3000);
         return;
@@ -168,6 +185,7 @@ const Index = () => {
       if (isExpired || !matched.active) {
         setScannerStatus("error");
         setMember(matched);
+        play("error");
         setStatus({ message: "Membership expired — renew at front desk", type: "error" });
         setTimeout(() => { setMember(null); setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 5000);
         return;
@@ -191,15 +209,17 @@ const Index = () => {
       await supabase.from("attendance").insert({ member_id: matched.id });
       setMember(matched);
       setScannerStatus("success");
+      play("success");
       setStatus({ message: `Welcome, ${matched.name}!`, type: "success" });
       setTimeout(() => { setMember(null); setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 3000);
     } catch (error: any) {
       setScannerStatus("error");
+      play("error");
       setStatus({ message: error.message, type: "error" });
     } finally {
       setIsScanning(false);
     }
-  }, [isScanning, capture, match]);
+  }, [isScanning, capture, match, play]);
 
   // Idle screen
   if (isIdle) {
@@ -240,14 +260,14 @@ const Index = () => {
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="w-full max-w-lg glass-card rounded-lg overflow-hidden"
       >
-        {/* Header */}
-        <div className="bg-primary p-6 flex items-center gap-4">
-          <img src={logo} alt="F2F Logo" className="w-14 h-14 object-contain rounded-lg" />
+        {/* Header — compact */}
+        <div className="bg-primary px-5 py-3 flex items-center gap-3">
+          <img src={logo} alt="F2F Logo" className="w-10 h-10 object-contain rounded-md" />
           <div>
-            <h1 className="text-2xl font-black text-primary-foreground tracking-tight uppercase">
+            <h1 className="text-lg font-black text-primary-foreground tracking-tight uppercase leading-tight">
               F2F Fitness
             </h1>
-            <p className="text-primary-foreground/70 text-xs font-semibold uppercase tracking-widest">
+            <p className="text-primary-foreground/70 text-[10px] font-semibold uppercase tracking-widest">
               Attendance System
             </p>
           </div>
@@ -271,12 +291,23 @@ const Index = () => {
         {/* Actions */}
         <div className="p-6 space-y-4">
           {mode === "enrollment" ? (
-            <EnrollmentForm onSubmit={handleEnrollment} isProcessing={isScanning} />
+            <div className="space-y-3">
+              <EnrollmentForm onSubmit={handleEnrollment} isProcessing={isScanning} />
+              {isScanning && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <span>Samples captured</span>
+                    <span>{enrollProgress}/3</span>
+                  </div>
+                  <Progress value={(enrollProgress / 3) * 100} className="h-2" />
+                </div>
+              )}
+            </div>
           ) : (
             <Button
               onClick={handleCheckIn}
               disabled={isScanning}
-              className="w-full h-14 bg-success text-success-foreground font-bold text-lg uppercase tracking-wider rounded-lg hover:bg-success/90 hover:scale-105 hover:shadow-[0_0_20px_hsl(142_71%_45%/0.25)] transition-all duration-200 active:scale-[0.98]"
+              className="w-full h-14 bg-primary text-primary-foreground font-bold text-lg uppercase tracking-wider rounded-lg hover:bg-primary/90 hover:scale-105 hover:shadow-[0_0_20px_hsl(25_95%_53%/0.25)] transition-all duration-200 active:scale-[0.98]"
             >
               {isScanning ? "Scanning..." : "Start Check-in"}
             </Button>
