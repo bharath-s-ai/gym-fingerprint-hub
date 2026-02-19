@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 
 type SoundType = "success" | "error" | "tap";
 
@@ -16,6 +16,7 @@ const DURATIONS: Record<SoundType, number> = {
 
 export function useSoundEffects() {
   const ctxRef = useRef<AudioContext | null>(null);
+  const [muted, setMuted] = useState(false);
 
   const getCtx = useCallback(() => {
     if (!ctxRef.current) ctxRef.current = new AudioContext();
@@ -23,6 +24,7 @@ export function useSoundEffects() {
   }, []);
 
   const play = useCallback((type: SoundType) => {
+    if (muted) return;
     try {
       const ctx = getCtx();
       const dur = DURATIONS[type];
@@ -42,7 +44,9 @@ export function useSoundEffects() {
     } catch {
       // Audio not available
     }
-  }, [getCtx]);
+  }, [getCtx, muted]);
 
-  return { play };
+  const toggleMute = useCallback(() => setMuted((m) => !m), []);
+
+  return { play, muted, toggleMute };
 }
