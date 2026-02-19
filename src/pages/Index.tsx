@@ -13,6 +13,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { HiddenAdminCorner, IdleCountdownModal } from "@/components/gym/KioskControls";
+import { MuteToggle } from "@/components/gym/MuteToggle";
 import { Fingerprint } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
 
@@ -47,7 +48,7 @@ const Index = () => {
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
   const { initialize, capture, match } = useFingerprint();
-  const { play } = useSoundEffects();
+  const { play, muted, toggleMute } = useSoundEffects();
   const navigate = useNavigate();
   useKeyboardShortcuts({ onModeChange: setMode });
 
@@ -263,7 +264,7 @@ const Index = () => {
         {/* Header — compact */}
         <div className="bg-primary px-5 py-3 flex items-center gap-3">
           <img src={logo} alt="F2F Logo" className="w-10 h-10 object-contain rounded-md" />
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-black text-primary-foreground tracking-tight uppercase leading-tight">
               F2F Fitness
             </h1>
@@ -271,6 +272,7 @@ const Index = () => {
               Attendance System
             </p>
           </div>
+          <MuteToggle muted={muted} onToggle={toggleMute} />
         </div>
 
         {/* Mode Toggle */}
