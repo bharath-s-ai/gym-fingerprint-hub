@@ -12,7 +12,7 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { HiddenAdminCorner, IdleCountdownModal } from "@/components/gym/KioskControls";
+import { HiddenAdminCorner, IdleCountdownModal, FullscreenToggle } from "@/components/gym/KioskControls";
 import { MuteToggle } from "@/components/gym/MuteToggle";
 import { Fingerprint } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
@@ -272,7 +272,10 @@ const Index = () => {
               Attendance System
             </p>
           </div>
-          <MuteToggle muted={muted} onToggle={toggleMute} />
+          <div className="flex items-center gap-2">
+            <MuteToggle muted={muted} onToggle={toggleMute} />
+            <FullscreenToggle />
+          </div>
         </div>
 
         {/* Mode Toggle */}
