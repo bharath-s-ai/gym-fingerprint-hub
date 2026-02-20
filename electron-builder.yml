@@ -1,0 +1,57 @@
+# electron-builder configuration for F2F Fitness Kiosk
+# Run: npm run electron:build  (or bun run electron:build)
+
+appId: com.f2ffitness.kiosk
+productName: F2F Fitness
+copyright: Copyright © 2025 F2F Fitness
+
+# Entry point
+main: electron/main.js
+
+# Directories
+directories:
+  output: dist-electron
+  buildResources: electron/assets
+
+# Files to include in the build
+files:
+  - dist/**
+  - electron/main.js
+  - electron/preload.js
+  - "!node_modules/**"
+  - "!src/**"
+  - "!electron/assets/**"
+
+# macOS
+mac:
+  category: public.app-category.healthcare-fitness
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: electron/assets/icon.icns
+
+# Windows
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: electron/assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  runAfterFinish: true
+
+# Linux
+linux:
+  target: AppImage
+  category: Healthcare
+  icon: electron/assets/icon.png
+
+# Auto-update (optional — configure server separately)
+# publish:
+#   provider: github
+#   owner: your-org
+#   repo: f2f-fitness
