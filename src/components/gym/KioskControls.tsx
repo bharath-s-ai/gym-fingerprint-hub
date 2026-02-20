@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Maximize, Minimize, Settings } from "lucide-react";
+import { Maximize, Minimize, PinIcon, MonitorCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useElectron } from "@/hooks/useElectron";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-interface KioskControlsProps {
-  children?: React.ReactNode;
-}
-
+// ── Fullscreen Toggle ────────────────────────────────────────────────────────
 export function FullscreenToggle() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -27,18 +30,87 @@ export function FullscreenToggle() {
   }, []);
 
   return (
-    <Button
-      onClick={toggleFullscreen}
-      variant="outline"
-      size="icon"
-      className="border-primary/30 bg-muted/50 text-primary hover:bg-primary/10 hover:border-primary/50 min-h-[48px] min-w-[48px]"
-      title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-    >
-      {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={toggleFullscreen}
+          variant="outline"
+          size="icon"
+          className="border-primary/30 bg-muted/50 text-primary hover:bg-primary/10 hover:border-primary/50 min-h-[48px] min-w-[48px]"
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+        >
+          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
+// ── Always on Top Toggle (Electron only) ────────────────────────────────────
+export function AlwaysOnTopToggle() {
+  const { isElectron, alwaysOnTop, toggleAlwaysOnTop } = useElectron();
+
+  // Only render inside Electron
+  if (!isElectron) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={toggleAlwaysOnTop}
+          variant="outline"
+          size="icon"
+          className={`border-primary/30 bg-muted/50 min-h-[48px] min-w-[48px] transition-colors ${
+            alwaysOnTop
+              ? "text-primary border-primary/60 bg-primary/10"
+              : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+          }`}
+          aria-label={alwaysOnTop ? "Disable always on top" : "Enable always on top"}
+        >
+          <PinIcon className="w-5 h-5" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {alwaysOnTop ? "Always on Top: ON" : "Always on Top: OFF"}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ── Auto-Start Toggle (Electron only) ───────────────────────────────────────
+export function AutoStartToggle() {
+  const { isElectron, autoStart, toggleAutoStart } = useElectron();
+
+  if (!isElectron) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={toggleAutoStart}
+          variant="outline"
+          size="icon"
+          className={`border-primary/30 bg-muted/50 min-h-[48px] min-w-[48px] transition-colors ${
+            autoStart
+              ? "text-primary border-primary/60 bg-primary/10"
+              : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+          }`}
+          aria-label={autoStart ? "Disable auto-start" : "Enable auto-start with system"}
+        >
+          <MonitorCheck className="w-5 h-5" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {autoStart ? "Auto-start: ON" : "Auto-start: OFF"}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ── Hidden Admin Corner (triple-tap top-right) ───────────────────────────────
 export function HiddenAdminCorner({ onUnlock }: { onUnlock: () => void }) {
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -63,6 +135,7 @@ export function HiddenAdminCorner({ onUnlock }: { onUnlock: () => void }) {
   );
 }
 
+// ── Idle Countdown Modal ─────────────────────────────────────────────────────
 export function IdleCountdownModal({ secondsLeft, onDismiss }: { secondsLeft: number; onDismiss: () => void }) {
   return (
     <AnimatePresence>

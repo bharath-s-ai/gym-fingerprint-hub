@@ -12,8 +12,9 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { HiddenAdminCorner, IdleCountdownModal, FullscreenToggle } from "@/components/gym/KioskControls";
+import { HiddenAdminCorner, IdleCountdownModal, FullscreenToggle, AlwaysOnTopToggle, AutoStartToggle } from "@/components/gym/KioskControls";
 import { MuteToggle } from "@/components/gym/MuteToggle";
+import { useElectron } from "@/hooks/useElectron";
 import { Fingerprint } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
 
@@ -49,8 +50,14 @@ const Index = () => {
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
   const { initialize, capture, match } = useFingerprint();
   const { play, muted, toggleMute } = useSoundEffects();
+  const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
   useKeyboardShortcuts({ onModeChange: setMode });
+
+  // Keep tray icon in sync with scanning state
+  useEffect(() => {
+    setTrayStatus(isScanning ? "scanning" : "ready");
+  }, [isScanning, setTrayStatus]);
 
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
@@ -273,6 +280,8 @@ const Index = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <AutoStartToggle />
+            <AlwaysOnTopToggle />
             <MuteToggle muted={muted} onToggle={toggleMute} />
             <FullscreenToggle />
           </div>
