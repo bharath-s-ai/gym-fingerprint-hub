@@ -7,6 +7,7 @@ import { ModeToggle } from "@/components/gym/ModeToggle";
 import { StatusDisplay, type StatusType } from "@/components/gym/StatusDisplay";
 import { MemberCard } from "@/components/gym/MemberCard";
 import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
+import { DeviceConnectionDialog } from "@/components/gym/DeviceConnectionDialog";
 import { useFingerprint } from "@/hooks/useFingerprint";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -15,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { HiddenAdminCorner, IdleCountdownModal, FullscreenToggle, AlwaysOnTopToggle, AutoStartToggle } from "@/components/gym/KioskControls";
 import { MuteToggle } from "@/components/gym/MuteToggle";
 import { useElectron } from "@/hooks/useElectron";
-import { Fingerprint } from "lucide-react";
+import { Fingerprint, Wifi, WifiOff } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
 
 interface Status {
@@ -45,10 +46,11 @@ const Index = () => {
   const [scannerStatus, setScannerStatus] = useState<"idle" | "success" | "error">("idle");
   const [isIdle, setIsIdle] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [enrollProgress, setEnrollProgress] = useState(0); // 0-3 samples
+  const [enrollProgress, setEnrollProgress] = useState(0);
+  const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
-  const { initialize, capture, match } = useFingerprint();
+  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError } = useFingerprint();
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
@@ -95,8 +97,11 @@ const Index = () => {
   useEffect(() => {
     initialize()
       .then(() => setStatus({ message: "System ready — select a mode to begin", type: "success" }))
-      .catch((err) => setStatus({ message: err.message, type: "error" }));
-  }, [initialize]);
+      .catch((err) => {
+        setStatus({ message: err.message, type: "error" });
+        if (isHardware) setShowConnectionDialog(true);
+      });
+  }, [initialize, isHardware]);
 
   const handleEnrollment = useCallback(async (phone: string) => {
     setIsScanning(true);
@@ -261,6 +266,13 @@ const Index = () => {
     <div className="min-h-screen gradient-bg flex items-center justify-center p-6 relative">
       <HiddenAdminCorner onUnlock={() => navigate("/dashboard")} />
       <IdleCountdownModal secondsLeft={countdown} onDismiss={resetIdleTimer} />
+      <DeviceConnectionDialog
+        open={showConnectionDialog}
+        onOpenChange={setShowConnectionDialog}
+        onConnect={async (ip, port) => { await connect(ip, port); }}
+        onAutoDetect={async () => autoDetect()}
+        error={deviceError}
+      />
 
       <motion.div
         initial={{ opacity: 0, x: 30 }}
@@ -280,6 +292,19 @@ const Index = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {isHardware && (
+              <Button
+                onClick={() => setShowConnectionDialog(true)}
+                variant="outline"
+                size="icon"
+                className={`border-primary/30 bg-muted/50 min-h-[48px] min-w-[48px] ${
+                  isConnected ? "text-green-500" : "text-destructive"
+                }`}
+                title={isConnected ? "Device connected" : "Device disconnected"}
+              >
+                {isConnected ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+              </Button>
+            )}
             <AutoStartToggle />
             <AlwaysOnTopToggle />
             <MuteToggle muted={muted} onToggle={toggleMute} />

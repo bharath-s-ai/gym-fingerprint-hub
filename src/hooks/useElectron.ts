@@ -18,13 +18,10 @@ interface ElectronBridge {
   getAutoStart: () => Promise<boolean>;
   setAutoStart: (value: boolean) => Promise<void>;
   setTrayStatus: (status: "ready" | "scanning") => Promise<void>;
+  essl?: any;
 }
 
-declare global {
-  interface Window {
-    electron?: ElectronBridge;
-  }
-}
+// Window.electron type is declared in useFingerprint.ts
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function useElectron() {

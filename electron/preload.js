@@ -13,31 +13,49 @@ contextBridge.exposeInMainWorld("electron", {
   isElectron: true,
 
   // ── Window management ────────────────────────────────────────────────────
-  /** Show the main window and bring it to focus */
   showWindow: () => ipcRenderer.invoke("show-window"),
 
   // ── Always on top ────────────────────────────────────────────────────────
-  /** Get current always-on-top state */
   getAlwaysOnTop: () => ipcRenderer.invoke("get-always-on-top"),
-  /** Set always-on-top state */
   setAlwaysOnTop: (value) => ipcRenderer.invoke("set-always-on-top", value),
-  /** Listen for always-on-top changes triggered from the tray menu */
   onAlwaysOnTopChanged: (callback) => {
     ipcRenderer.on("always-on-top-changed", (_, value) => callback(value));
     return () => ipcRenderer.removeAllListeners("always-on-top-changed");
   },
 
   // ── Auto-start ───────────────────────────────────────────────────────────
-  /** Get current auto-start (login item) state */
   getAutoStart: () => ipcRenderer.invoke("get-auto-start"),
-  /** Set auto-start with system on login */
   setAutoStart: (value) => ipcRenderer.invoke("set-auto-start", value),
 
   // ── Tray status indicator ────────────────────────────────────────────────
-  /**
-   * Update tray icon color:
-   *   "ready"    → green dot
-   *   "scanning" → orange dot
-   */
   setTrayStatus: (status) => ipcRenderer.invoke("set-tray-status", status),
+
+  // ── eSSL K30 Pro Fingerprint Device ──────────────────────────────────────
+  essl: {
+    connect: (opts) => ipcRenderer.invoke("essl:connect", opts),
+    disconnect: () => ipcRenderer.invoke("essl:disconnect"),
+    capture: () => ipcRenderer.invoke("essl:capture"),
+    enroll: (opts) => ipcRenderer.invoke("essl:enroll", opts),
+    match: () => ipcRenderer.invoke("essl:match"),
+    delete: (opts) => ipcRenderer.invoke("essl:delete", opts),
+    sync: () => ipcRenderer.invoke("essl:sync"),
+    info: () => ipcRenderer.invoke("essl:info"),
+    autoDetect: (opts) => ipcRenderer.invoke("essl:auto-detect", opts),
+    status: () => ipcRenderer.invoke("essl:status"),
+    /** Listen for scanning state changes */
+    onScanning: (cb) => {
+      ipcRenderer.on("essl:scanning", (_, v) => cb(v));
+      return () => ipcRenderer.removeAllListeners("essl:scanning");
+    },
+    /** Listen for enrollment progress */
+    onEnrollProgress: (cb) => {
+      ipcRenderer.on("essl:enroll-progress", (_, v) => cb(v));
+      return () => ipcRenderer.removeAllListeners("essl:enroll-progress");
+    },
+    /** Listen for connection status changes */
+    onStatus: (cb) => {
+      ipcRenderer.on("essl:status", (_, v) => cb(v));
+      return () => ipcRenderer.removeAllListeners("essl:status");
+    },
+  },
 });
