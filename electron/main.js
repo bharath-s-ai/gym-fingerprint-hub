@@ -28,6 +28,7 @@ const {
   shell,
 } = require("electron");
 const path = require("path");
+const { registerEsslIpcHandlers } = require("./essl-ipc");
 
 // ── Single instance lock ────────────────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
@@ -224,6 +225,7 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   registerIpcHandlers();
+  registerEsslIpcHandlers(mainWindow);
 
   // Global hotkey: Ctrl+Shift+F (Win/Linux) / Cmd+Shift+F (macOS) → show/hide
   globalShortcut.register("CommandOrControl+Shift+F", () => {
