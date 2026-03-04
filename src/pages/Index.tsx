@@ -29,6 +29,7 @@ interface Member {
   name: string;
   phone: string;
   email?: string | null;
+  member_id?: number | null;
   joining_date?: string | null;
   expiry_date: string;
   active: boolean;
@@ -103,23 +104,23 @@ const Index = () => {
       });
   }, [initialize, isHardware]);
 
-  const handleEnrollment = useCallback(async (phone: string) => {
+  const handleEnrollment = useCallback(async (warriorId: string) => {
     setIsScanning(true);
     setMember(null);
     setScannerStatus("idle");
     setEnrollProgress(0);
     play("tap");
-    setStatus({ message: "Looking up member...", type: "waiting" });
+    setStatus({ message: "Looking up warrior...", type: "waiting" });
 
     try {
       const { data, error } = await supabase
         .from("members")
         .select("*")
-        .eq("phone", phone)
+        .eq("member_id", parseInt(warriorId, 10))
         .maybeSingle();
 
       if (error) throw new Error("Database error");
-      if (!data) throw new Error("No member found with that phone number");
+      if (!data) throw new Error("No warrior found with ID #" + warriorId);
 
       setMember(data as Member);
 
