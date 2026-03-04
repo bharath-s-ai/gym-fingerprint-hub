@@ -55,6 +55,7 @@ export type Database = {
           fingerprint_template: string | null
           id: string
           joining_date: string | null
+          member_id: number | null
           name: string
           phone: string
           updated_at: string | null
@@ -67,6 +68,7 @@ export type Database = {
           fingerprint_template?: string | null
           id?: string
           joining_date?: string | null
+          member_id?: number | null
           name: string
           phone: string
           updated_at?: string | null
@@ -79,6 +81,7 @@ export type Database = {
           fingerprint_template?: string | null
           id?: string
           joining_date?: string | null
+          member_id?: number | null
           name?: string
           phone?: string
           updated_at?: string | null
