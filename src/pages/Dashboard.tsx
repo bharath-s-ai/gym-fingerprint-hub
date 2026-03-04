@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Users, Fingerprint, Calendar, Search, X } from "lucide-react";
+import { ArrowLeft, Users, Fingerprint, Calendar, Search, X, EyeOff, Eye, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,13 +13,21 @@ import { MemberProfilePanel } from "@/components/gym/MemberProfilePanel";
 import { AttendanceAnalytics } from "@/components/gym/AttendanceAnalytics";
 import { DataExport } from "@/components/gym/DataExport";
 import { FullscreenToggle } from "@/components/gym/KioskControls";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import logo from "@/assets/f2f-logo.jpg";
+
+const DASHBOARD_IDLE_TIMEOUT = 60000;
 
 interface Member {
   id: string;
   name: string;
   phone: string;
   email: string | null;
+  member_id: number | null;
   joining_date: string | null;
   expiry_date: string;
   active: boolean | null;
@@ -28,10 +36,15 @@ interface Member {
   last_check_in: string | null;
 }
 
+function maskValue(value: string) {
+  if (!value || value.length <= 4) return "••••";
+  return value.slice(0, 2) + "••••" + value.slice(-2);
+}
+
 function SkeletonRow() {
   return (
     <TableRow className="border-border/30">
-      {Array.from({ length: 7 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <TableCell key={i}>
           <div className="h-4 rounded bg-gradient-to-r from-muted via-muted/70 to-muted animate-shimmer" />
         </TableCell>
@@ -57,6 +70,27 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const navigate = useNavigate();
+  const idleTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Idle lock: auto-navigate back to check-in after 60s inactivity
+  const resetIdleTimer = useCallback(() => {
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => {
+      navigate("/");
+    }, DASHBOARD_IDLE_TIMEOUT);
+  }, [navigate]);
+
+  useEffect(() => {
+    resetIdleTimer();
+    const events = ["mousedown", "touchstart", "keydown", "scroll"];
+    events.forEach((e) => window.addEventListener(e, resetIdleTimer));
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, resetIdleTimer));
+      clearTimeout(idleTimer.current);
+    };
+  }, [resetIdleTimer]);
 
   const fetchMembers = useCallback(async () => {
     const { data: membersData } = await supabase
@@ -92,7 +126,10 @@ const Dashboard = () => {
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
   const filtered = members.filter(
-    (m) => m.name.toLowerCase().includes(search.toLowerCase()) || m.phone.includes(search)
+    (m) =>
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.phone.includes(search) ||
+      (m.member_id && String(m.member_id).includes(search))
   );
 
   const isExpired = (date: string) => new Date(date) < new Date();
@@ -127,7 +164,29 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <FullscreenToggle />
+          <div className="flex items-center gap-2">
+            {/* Privacy Mode Toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setPrivacyMode(!privacyMode)}
+                  variant="outline"
+                  size="icon"
+                  className={`border-primary/30 bg-muted/50 min-h-[48px] min-w-[48px] transition-colors ${
+                    privacyMode
+                      ? "text-primary border-primary/60 bg-primary/10"
+                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                  }`}
+                >
+                  {privacyMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {privacyMode ? "Privacy Mode: ON" : "Privacy Mode: OFF"}
+              </TooltipContent>
+            </Tooltip>
+            <FullscreenToggle />
+          </div>
         </div>
 
         {/* Stats */}
@@ -155,7 +214,7 @@ const Dashboard = () => {
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
-              placeholder="Search warriors by name or phone..."
+              placeholder="Search by name, phone, or warrior ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-12 bg-muted/50 border-border h-14 text-lg focus:border-primary focus:shadow-[0_0_0_3px_hsl(25_95%_53%/0.1)]"
@@ -177,7 +236,7 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow className="border-primary/20 hover:bg-transparent">
-                  {["Name", "Phone", "Status", "Enrolled", "Expiry", "Check-ins", "Last Visit"].map((h) => (
+                  {["ID", "Name", "Phone", "Status", "Enrolled", "Expiry", "Check-ins", "Last Visit"].map((h) => (
                     <TableHead key={h} className="uppercase text-xs tracking-wider text-muted-foreground font-semibold">{h}</TableHead>
                   ))}
                 </TableRow>
@@ -202,7 +261,7 @@ const Dashboard = () => {
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
               <Search className="w-16 h-16 text-muted-foreground/30 mb-4" />
               <h3 className="text-lg font-bold text-foreground mb-1">No Matches Found</h3>
-              <p className="text-muted-foreground text-sm mb-4">Try a different name or phone number</p>
+              <p className="text-muted-foreground text-sm mb-4">Try a different name, phone, or warrior ID</p>
               <Button variant="outline" onClick={() => setSearch("")} className="border-primary/30 text-primary hover:bg-primary/10 font-semibold uppercase tracking-wider">
                 Clear Filters
               </Button>
@@ -211,7 +270,7 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow className="border-primary/20 hover:bg-transparent">
-                  {["Name", "Phone", "Status", "Enrolled", "Expiry", "Check-ins", "Last Visit"].map((h) => (
+                  {["ID", "Name", "Phone", "Status", "Enrolled", "Expiry", "Check-ins", "Last Visit"].map((h) => (
                     <TableHead key={h} className={`uppercase text-xs tracking-wider text-muted-foreground font-semibold ${h === "Check-ins" ? "text-right" : ""}`}>{h}</TableHead>
                   ))}
                 </TableRow>
@@ -226,8 +285,20 @@ const Dashboard = () => {
                     onClick={() => setSelectedMember(m)}
                     className="border-border/30 hover:bg-primary/5 hover:border-l-2 hover:border-l-primary transition-all group cursor-pointer"
                   >
+                    <TableCell>
+                      {m.member_id ? (
+                        <span className="flex items-center gap-1 text-primary font-black text-sm">
+                          <Hash className="w-3 h-3" />
+                          {m.member_id}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-bold text-foreground">{m.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{m.phone}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {privacyMode ? maskValue(m.phone) : m.phone}
+                    </TableCell>
                     <TableCell>
                       {!m.active || isExpired(m.expiry_date) ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-destructive/20 text-destructive border border-destructive/30">EXPIRED</span>

@@ -8,6 +8,8 @@ import { StatusDisplay, type StatusType } from "@/components/gym/StatusDisplay";
 import { MemberCard } from "@/components/gym/MemberCard";
 import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
 import { DeviceConnectionDialog } from "@/components/gym/DeviceConnectionDialog";
+import { WarriorWelcome } from "@/components/gym/WarriorWelcome";
+import { HardwareStatusBar } from "@/components/gym/HardwareStatusBar";
 import { useFingerprint } from "@/hooks/useFingerprint";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -16,8 +18,9 @@ import { Progress } from "@/components/ui/progress";
 import { HiddenAdminCorner, IdleCountdownModal, FullscreenToggle, AlwaysOnTopToggle, AutoStartToggle } from "@/components/gym/KioskControls";
 import { MuteToggle } from "@/components/gym/MuteToggle";
 import { useElectron } from "@/hooks/useElectron";
-import { Fingerprint, Wifi, WifiOff } from "lucide-react";
+import { Fingerprint } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
+import { differenceInDays, subDays, format } from "date-fns";
 
 interface Status {
   message: string;
@@ -38,6 +41,56 @@ interface Member {
 
 const IDLE_TIMEOUT = 30000;
 const COUNTDOWN_START = 10;
+const WELCOME_DURATION = 3000;
+
+// Helper: compute consecutive-day streak ending today/yesterday
+async function computeStreak(memberId: string): Promise<number> {
+  const { data } = await supabase
+    .from("attendance")
+    .select("check_in")
+    .eq("member_id", memberId)
+    .order("check_in", { ascending: false })
+    .limit(60);
+  if (!data || data.length === 0) return 0;
+
+  const uniqueDays = [...new Set(data.map(a => format(new Date(a.check_in!), "yyyy-MM-dd")))];
+  const today = format(new Date(), "yyyy-MM-dd");
+  const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
+
+  let streak = 0;
+  let checkDate = uniqueDays[0] === today || uniqueDays[0] === yesterday ? new Date(uniqueDays[0]) : null;
+  if (!checkDate) return 0;
+
+  for (const day of uniqueDays) {
+    const expected = format(checkDate, "yyyy-MM-dd");
+    if (day === expected) {
+      streak++;
+      checkDate = subDays(checkDate, 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+async function getTotalVisits(memberId: string): Promise<number> {
+  const { count } = await supabase
+    .from("attendance")
+    .select("*", { count: "exact", head: true })
+    .eq("member_id", memberId);
+  return count || 0;
+}
+
+async function getLastCheckIn(memberId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("attendance")
+    .select("check_in")
+    .eq("member_id", memberId)
+    .order("check_in", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.check_in || null;
+}
 
 const Index = () => {
   const [mode, setMode] = useState<"enrollment" | "checkin">("checkin");
@@ -49,6 +102,12 @@ const Index = () => {
   const [countdown, setCountdown] = useState(0);
   const [enrollProgress, setEnrollProgress] = useState(0);
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  // Welcome overlay state
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const [welcomeData, setWelcomeData] = useState({ name: "", memberId: null as number | null, daysRemaining: 0, streak: 0, totalVisits: 0 });
+  // Member stats for card
+  const [memberStats, setMemberStats] = useState({ totalVisits: 0, lastCheckIn: null as string | null, streak: 0 });
+
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
   const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError } = useFingerprint();
@@ -68,7 +127,6 @@ const Index = () => {
     clearTimeout(idleTimer.current);
     clearInterval(countdownTimer.current);
     idleTimer.current = setTimeout(() => {
-      // Start countdown
       let sec = COUNTDOWN_START;
       setCountdown(sec);
       countdownTimer.current = setInterval(() => {
@@ -103,6 +161,25 @@ const Index = () => {
         if (isHardware) setShowConnectionDialog(true);
       });
   }, [initialize, isHardware]);
+
+  // Show welcome overlay with stats
+  const showWelcomeOverlay = useCallback(async (matched: Member) => {
+    const [totalVisits, streak] = await Promise.all([
+      getTotalVisits(matched.id),
+      computeStreak(matched.id),
+    ]);
+    const daysRemaining = differenceInDays(new Date(matched.expiry_date), new Date());
+
+    setWelcomeData({
+      name: matched.name,
+      memberId: matched.member_id || null,
+      daysRemaining,
+      streak,
+      totalVisits,
+    });
+    setWelcomeVisible(true);
+    setTimeout(() => setWelcomeVisible(false), WELCOME_DURATION);
+  }, []);
 
   const handleEnrollment = useCallback(async (warriorId: string) => {
     setIsScanning(true);
@@ -162,6 +239,7 @@ const Index = () => {
     setIsScanning(true);
     setMember(null);
     setScannerStatus("idle");
+    setMemberStats({ totalVisits: 0, lastCheckIn: null, streak: 0 });
     play("tap");
     setStatus({ message: "Place finger on scanner...", type: "waiting" });
 
@@ -191,6 +269,14 @@ const Index = () => {
         setTimeout(() => { setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 3000);
         return;
       }
+
+      // Fetch stats for card display
+      const [totalVisits, lastCheckIn, streak] = await Promise.all([
+        getTotalVisits(matched.id),
+        getLastCheckIn(matched.id),
+        computeStreak(matched.id),
+      ]);
+      setMemberStats({ totalVisits, lastCheckIn, streak });
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -225,7 +311,11 @@ const Index = () => {
       setScannerStatus("success");
       play("success");
       setStatus({ message: `Welcome, ${matched.name}!`, type: "success" });
-      setTimeout(() => { setMember(null); setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 3000);
+
+      // Show full-screen warrior welcome
+      showWelcomeOverlay(matched);
+
+      setTimeout(() => { setMember(null); setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, WELCOME_DURATION + 500);
     } catch (error: any) {
       setScannerStatus("error");
       play("error");
@@ -233,7 +323,7 @@ const Index = () => {
     } finally {
       setIsScanning(false);
     }
-  }, [isScanning, capture, match, play]);
+  }, [isScanning, capture, match, play, showWelcomeOverlay]);
 
   // Idle screen
   if (isIdle) {
@@ -264,9 +354,10 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen gradient-bg flex items-center justify-center p-6 relative">
+    <div className="min-h-screen gradient-bg flex flex-col relative">
       <HiddenAdminCorner onUnlock={() => navigate("/dashboard")} />
       <IdleCountdownModal secondsLeft={countdown} onDismiss={resetIdleTimer} />
+      <WarriorWelcome visible={welcomeVisible} {...welcomeData} />
       <DeviceConnectionDialog
         open={showConnectionDialog}
         onOpenChange={setShowConnectionDialog}
@@ -275,96 +366,99 @@ const Index = () => {
         error={deviceError}
       />
 
-      <motion.div
-        initial={{ opacity: 0, x: 30 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="w-full max-w-lg glass-card rounded-lg overflow-hidden"
-      >
-        {/* Header — compact */}
-        <div className="bg-primary px-5 py-3 flex items-center gap-3">
-          <img src={logo} alt="F2F Logo" className="w-10 h-10 object-contain rounded-md" />
-          <div className="flex-1">
-            <h1 className="text-lg font-black text-primary-foreground tracking-tight uppercase leading-tight">
-              F2F Fitness
-            </h1>
-            <p className="text-primary-foreground/70 text-[10px] font-semibold uppercase tracking-widest">
-              Attendance System
-            </p>
+      {/* Hardware Status Bar */}
+      <HardwareStatusBar
+        isHardware={isHardware}
+        isConnected={isConnected}
+        deviceIp="192.168.1.201"
+      />
+
+      <div className="flex-1 flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="w-full max-w-lg glass-card rounded-lg overflow-hidden"
+        >
+          {/* Header — compact */}
+          <div className="bg-primary px-5 py-3 flex items-center gap-3">
+            <img src={logo} alt="F2F Logo" className="w-10 h-10 object-contain rounded-md" />
+            <div className="flex-1">
+              <h1 className="text-lg font-black text-primary-foreground tracking-tight uppercase leading-tight">
+                F2F Fitness
+              </h1>
+              <p className="text-primary-foreground/70 text-[10px] font-semibold uppercase tracking-widest">
+                Attendance System
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <AutoStartToggle />
+              <AlwaysOnTopToggle />
+              <MuteToggle muted={muted} onToggle={toggleMute} />
+              <FullscreenToggle />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isHardware && (
+
+          {/* Mode Toggle */}
+          <div className="p-6 pb-0">
+            <ModeToggle currentMode={mode} onModeChange={setMode} />
+          </div>
+
+          {/* Scanner */}
+          <div className="py-8">
+            <FingerprintScanner isScanning={isScanning} mode={mode} status={scannerStatus} />
+          </div>
+
+          {/* Status */}
+          <div className="px-6">
+            <StatusDisplay message={status.message} type={status.type} />
+          </div>
+
+          {/* Actions */}
+          <div className="p-6 space-y-4">
+            {mode === "enrollment" ? (
+              <div className="space-y-3">
+                <EnrollmentForm onSubmit={handleEnrollment} isProcessing={isScanning} />
+                {isScanning && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <span>Samples captured</span>
+                      <span>{enrollProgress}/3</span>
+                    </div>
+                    <Progress value={(enrollProgress / 3) * 100} className="h-2" />
+                  </div>
+                )}
+              </div>
+            ) : (
               <Button
-                onClick={() => setShowConnectionDialog(true)}
-                variant="outline"
-                size="icon"
-                className={`border-primary/30 bg-muted/50 min-h-[48px] min-w-[48px] ${
-                  isConnected ? "text-green-500" : "text-destructive"
-                }`}
-                title={isConnected ? "Device connected" : "Device disconnected"}
+                onClick={handleCheckIn}
+                disabled={isScanning}
+                className="w-full h-14 bg-primary text-primary-foreground font-black text-lg uppercase tracking-[0.15em] rounded-lg hover:bg-primary/90 hover:scale-[1.02] hover:shadow-[0_0_30px_hsl(25_95%_53%/0.3)] transition-all duration-200 active:scale-[0.98]"
               >
-                {isConnected ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+                {isScanning ? "SCANNING..." : "START CHECK-IN"}
               </Button>
             )}
-            <AutoStartToggle />
-            <AlwaysOnTopToggle />
-            <MuteToggle muted={muted} onToggle={toggleMute} />
-            <FullscreenToggle />
-          </div>
-        </div>
 
-        {/* Mode Toggle */}
-        <div className="p-6 pb-0">
-          <ModeToggle currentMode={mode} onModeChange={setMode} />
-        </div>
-
-        {/* Scanner */}
-        <div className="py-8">
-          <FingerprintScanner isScanning={isScanning} mode={mode} status={scannerStatus} />
-        </div>
-
-        {/* Status */}
-        <div className="px-6">
-          <StatusDisplay message={status.message} type={status.type} />
-        </div>
-
-        {/* Actions */}
-        <div className="p-6 space-y-4">
-          {mode === "enrollment" ? (
-            <div className="space-y-3">
-              <EnrollmentForm onSubmit={handleEnrollment} isProcessing={isScanning} />
-              {isScanning && (
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    <span>Samples captured</span>
-                    <span>{enrollProgress}/3</span>
-                  </div>
-                  <Progress value={(enrollProgress / 3) * 100} className="h-2" />
-                </div>
+            <AnimatePresence>
+              {member && (
+                <MemberCard
+                  member={member}
+                  totalVisits={memberStats.totalVisits}
+                  lastCheckIn={memberStats.lastCheckIn}
+                  streak={memberStats.streak}
+                />
               )}
-            </div>
-          ) : (
-            <Button
-              onClick={handleCheckIn}
-              disabled={isScanning}
-              className="w-full h-14 bg-primary text-primary-foreground font-bold text-lg uppercase tracking-wider rounded-lg hover:bg-primary/90 hover:scale-105 hover:shadow-[0_0_20px_hsl(25_95%_53%/0.25)] transition-all duration-200 active:scale-[0.98]"
-            >
-              {isScanning ? "Scanning..." : "Start Check-in"}
-            </Button>
-          )}
+            </AnimatePresence>
+          </div>
 
-          <AnimatePresence>
-            {member && <MemberCard member={member} />}
-          </AnimatePresence>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-primary/20 p-4 text-center">
-          <Link to="/dashboard" className="text-muted-foreground text-xs font-semibold uppercase tracking-wider hover:text-primary transition-colors">
-            📊 Member Dashboard
-          </Link>
-        </div>
-      </motion.div>
+          {/* Footer */}
+          <div className="border-t border-primary/20 p-4 text-center">
+            <Link to="/dashboard" className="text-muted-foreground text-xs font-semibold uppercase tracking-wider hover:text-primary transition-colors">
+              📊 Member Dashboard
+            </Link>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };
