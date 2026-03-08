@@ -371,6 +371,7 @@ const Index = () => {
         isHardware={isHardware}
         isConnected={isConnected}
         deviceIp="192.168.1.201"
+        latencyMs={latencyMs}
       />
 
       <div className="flex-1 flex items-center justify-center p-6">
