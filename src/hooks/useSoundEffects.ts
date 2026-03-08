@@ -1,17 +1,19 @@
 import { useCallback, useRef, useState } from "react";
 
-type SoundType = "success" | "error" | "tap";
+type SoundType = "success" | "error" | "tap" | "warning";
 
 const FREQUENCIES: Record<SoundType, number[]> = {
   success: [523, 659, 784],
   error: [330, 247],
   tap: [440],
+  warning: [440, 370, 440],
 };
 
 const DURATIONS: Record<SoundType, number> = {
   success: 120,
   error: 150,
   tap: 50,
+  warning: 100,
 };
 
 export function useSoundEffects() {
