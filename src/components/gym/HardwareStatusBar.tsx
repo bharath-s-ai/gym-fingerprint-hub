@@ -79,8 +79,10 @@ export function HardwareStatusBar({
   deviceIp,
   latencyMs,
   reconnectAttempt = 0,
+  maxReconnectAttempts = 10,
   onHighLatency,
   onDisconnect,
+  onManualReconnect,
 }: HardwareStatusBarProps) {
   const wasConnected = useRef(isConnected);
   const wasHighLatency = useRef(false);
