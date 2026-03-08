@@ -447,12 +447,14 @@ const Index = () => {
 
             <AnimatePresence>
               {member && (
-                <MemberCard
-                  member={member}
-                  totalVisits={memberStats.totalVisits}
-                  lastCheckIn={memberStats.lastCheckIn}
-                  streak={memberStats.streak}
-                />
+                <div className="cursor-pointer" onClick={() => setProfileMember(member)}>
+                  <MemberCard
+                    member={member}
+                    totalVisits={memberStats.totalVisits}
+                    lastCheckIn={memberStats.lastCheckIn}
+                    streak={memberStats.streak}
+                  />
+                </div>
               )}
             </AnimatePresence>
           </div>
