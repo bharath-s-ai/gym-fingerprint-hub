@@ -10,6 +10,7 @@ import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
 import { DeviceConnectionDialog } from "@/components/gym/DeviceConnectionDialog";
 import { WarriorWelcome } from "@/components/gym/WarriorWelcome";
 import { HardwareStatusBar } from "@/components/gym/HardwareStatusBar";
+import { MemberProfilePanel } from "@/components/gym/MemberProfilePanel";
 import { useFingerprint } from "@/hooks/useFingerprint";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
