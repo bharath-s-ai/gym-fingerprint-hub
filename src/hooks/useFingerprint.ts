@@ -234,6 +234,7 @@ export function useFingerprint() {
     isHardware,
     deviceError,
     latencyMs,
+    reconnectAttempt,
     // Fingerprint operations
     capture,
     enroll,
