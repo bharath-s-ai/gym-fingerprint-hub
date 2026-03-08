@@ -414,25 +414,27 @@ const Index = () => {
         onManualReconnect={isHardware ? retryConnect : demo.retryConnect}
       />
 
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
         <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="w-full max-w-lg glass-card rounded-lg overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full max-w-lg glass-card rounded-2xl overflow-hidden"
         >
-          {/* Header — compact */}
-          <div className="bg-primary px-5 py-3 flex items-center gap-3">
-            <img src={logo} alt="F2F Logo" className="w-10 h-10 object-contain rounded-md" />
-            <div className="flex-1">
-              <h1 className="text-lg font-black text-primary-foreground tracking-tight uppercase leading-tight">
+          {/* Header */}
+          <div className="relative bg-gradient-to-r from-primary via-primary to-primary/90 px-5 py-4 flex items-center gap-3 overflow-hidden">
+            {/* Subtle diagonal accent */}
+            <div className="absolute -right-4 -top-4 w-32 h-32 bg-primary-foreground/5 rounded-full blur-2xl pointer-events-none" />
+            <img src={logo} alt="F2F Logo" className="w-11 h-11 object-contain rounded-lg border border-primary-foreground/10 relative z-10" />
+            <div className="flex-1 relative z-10">
+              <h1 className="text-xl font-black text-primary-foreground tracking-tight uppercase leading-none">
                 F2F Fitness
               </h1>
-              <p className="text-primary-foreground/70 text-[10px] font-semibold uppercase tracking-widest">
+              <p className="text-primary-foreground/60 text-[10px] font-bold uppercase tracking-[0.25em] mt-0.5">
                 Attendance System
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 relative z-10">
               <AutoStartToggle />
               <AlwaysOnTopToggle />
               <MuteToggle muted={muted} onToggle={toggleMute} />
