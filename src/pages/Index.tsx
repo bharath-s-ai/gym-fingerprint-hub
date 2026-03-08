@@ -108,6 +108,7 @@ const Index = () => {
   const [welcomeData, setWelcomeData] = useState({ name: "", memberId: null as number | null, daysRemaining: 0, streak: 0, totalVisits: 0 });
   // Member stats for card
   const [memberStats, setMemberStats] = useState({ totalVisits: 0, lastCheckIn: null as string | null, streak: 0 });
+  const [profileMember, setProfileMember] = useState<Member | null>(null);
 
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
