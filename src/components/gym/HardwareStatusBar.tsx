@@ -11,8 +11,10 @@ interface HardwareStatusBarProps {
   deviceIp?: string;
   latencyMs?: number | null;
   reconnectAttempt?: number;
+  maxReconnectAttempts?: number;
   onHighLatency?: () => void;
   onDisconnect?: () => void;
+  onManualReconnect?: () => void;
 }
 
 function getLatencyColor(ms: number): string {
