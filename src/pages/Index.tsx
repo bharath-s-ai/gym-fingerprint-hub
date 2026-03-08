@@ -347,7 +347,7 @@ const Index = () => {
         <motion.img
           src={logo}
           alt="F2F Logo"
-          className="w-32 h-32 object-contain mb-6 relative z-10"
+          className="w-20 h-20 sm:w-32 sm:h-32 object-contain mb-4 sm:mb-6 relative z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -355,9 +355,9 @@ const Index = () => {
         <motion.div
           animate={{ scale: [1, 1.08, 1], opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          className="mb-10 relative z-10"
+          className="mb-6 sm:mb-10 relative z-10"
         >
-          <Fingerprint className="w-20 h-20 sm:w-28 sm:h-28 text-primary drop-shadow-[0_0_30px_hsl(25_95%_53%/0.4)]" />
+          <Fingerprint className="w-16 h-16 sm:w-24 sm:h-24 text-primary drop-shadow-[0_0_30px_hsl(25_95%_53%/0.4)]" />
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -369,10 +369,30 @@ const Index = () => {
             animate={{ scale: [1, 1.03, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Button className="bg-primary text-primary-foreground px-14 py-7 text-xl font-black uppercase tracking-[0.2em] hover:bg-primary/90 rounded-xl glow-primary transition-shadow duration-300 hover:glow-primary-intense">
+            <Button className="bg-primary text-primary-foreground px-8 sm:px-14 py-5 sm:py-7 text-base sm:text-xl font-black uppercase tracking-[0.2em] hover:bg-primary/90 rounded-xl glow-primary transition-shadow duration-300 hover:glow-primary-intense">
               Tap to Start
             </Button>
           </motion.div>
+        </motion.div>
+
+        {/* Swipe-up hint — mobile only */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          className="sm:hidden absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 z-10"
+        >
+          <motion.div
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-muted-foreground">
+              <path d="M12 19V5M12 5l-5 5M12 5l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </motion.div>
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            Swipe up to begin
+          </span>
         </motion.div>
       </div>
     );
