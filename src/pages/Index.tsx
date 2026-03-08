@@ -372,6 +372,8 @@ const Index = () => {
         isConnected={isConnected}
         deviceIp="192.168.1.201"
         latencyMs={latencyMs}
+        onHighLatency={() => play("warning")}
+        onDisconnect={() => play("error")}
       />
 
       <div className="flex-1 flex items-center justify-center p-6">
