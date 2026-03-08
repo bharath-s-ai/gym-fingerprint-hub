@@ -151,7 +151,34 @@ export function HardwareStatusBar({
           <span>
             eSSL K30 Pro {isConnected ? "Online" : ""}
           </span>
-          {!isConnected && (
+          {!isConnected && reconnectAttempt > 0 && reconnectAttempt < maxReconnectAttempts && (
+            <>
+              <motion.span
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+                className="text-destructive"
+              >
+                RECONNECTING...
+              </motion.span>
+              <span className="text-destructive/60 text-[10px]">
+                Attempt {reconnectAttempt}/{maxReconnectAttempts}
+              </span>
+            </>
+          )}
+          {!isConnected && reconnectAttempt >= maxReconnectAttempts && (
+            <>
+              <span className="text-destructive text-[10px] font-black">FAILED</span>
+              {onManualReconnect && (
+                <button
+                  onClick={onManualReconnect}
+                  className="ml-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors"
+                >
+                  Retry
+                </button>
+              )}
+            </>
+          )}
+          {!isConnected && reconnectAttempt === 0 && (
             <motion.span
               animate={{ opacity: [1, 0.4, 1] }}
               transition={{ duration: 1.2, repeat: Infinity }}
@@ -159,11 +186,6 @@ export function HardwareStatusBar({
             >
               RECONNECTING...
             </motion.span>
-          )}
-          {!isConnected && reconnectAttempt > 0 && (
-            <span className="text-destructive/60 text-[10px]">
-              Attempt {reconnectAttempt}/10
-            </span>
           )}
         </div>
 
