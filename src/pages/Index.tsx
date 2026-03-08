@@ -382,6 +382,7 @@ const Index = () => {
         reconnectAttempt={reconnectAttempt}
         onHighLatency={() => play("warning")}
         onDisconnect={() => play("error")}
+        onManualReconnect={retryConnect}
       />
 
       <div className="flex-1 flex items-center justify-center p-6">
