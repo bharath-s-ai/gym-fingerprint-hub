@@ -76,6 +76,7 @@ export function HardwareStatusBar({
   isConnected,
   deviceIp,
   latencyMs,
+  reconnectAttempt = 0,
   onHighLatency,
   onDisconnect,
 }: HardwareStatusBarProps) {
