@@ -8,6 +8,12 @@ interface HardwareStatusBarProps {
   latencyMs?: number | null;
 }
 
+function getLatencyColor(ms: number): string {
+  if (ms < 30) return "text-success";
+  if (ms < 80) return "text-warning";
+  return "text-destructive";
+}
+
 export function HardwareStatusBar({ isHardware, isConnected, deviceIp, latencyMs }: HardwareStatusBarProps) {
   if (!isHardware) return null;
 
@@ -49,7 +55,7 @@ export function HardwareStatusBar({ isHardware, isConnected, deviceIp, latencyMs
           <span className="text-muted-foreground">{deviceIp}</span>
         )}
         {isConnected && latencyMs != null && (
-          <div className="flex items-center gap-1 text-muted-foreground">
+          <div className={`flex items-center gap-1 ${getLatencyColor(latencyMs)}`}>
             <Activity className="w-3 h-3" />
             <span>{latencyMs}ms</span>
           </div>
