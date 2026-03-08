@@ -476,7 +476,7 @@ const Index = () => {
               <Button
                 onClick={handleCheckIn}
                 disabled={isScanning}
-                className="w-full h-14 bg-primary text-primary-foreground font-black text-lg uppercase tracking-[0.15em] rounded-lg hover:bg-primary/90 hover:scale-[1.02] hover:shadow-[0_0_30px_hsl(25_95%_53%/0.3)] transition-all duration-200 active:scale-[0.98]"
+                className="w-full h-16 bg-primary text-primary-foreground font-black text-lg uppercase tracking-[0.2em] rounded-xl hover:bg-primary/90 hover:scale-[1.02] transition-all duration-200 active:scale-[0.98] glow-primary hover:glow-primary-intense"
               >
                 {isScanning ? "SCANNING..." : "START CHECK-IN"}
               </Button>
@@ -497,9 +497,10 @@ const Index = () => {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-primary/20 p-4 text-center">
-            <Link to="/dashboard" className="text-muted-foreground text-xs font-semibold uppercase tracking-wider hover:text-primary transition-colors">
-              📊 Member Dashboard
+          <div className="border-t border-primary/10 px-5 py-3.5 flex items-center justify-center">
+            <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-[0.2em] hover:text-primary transition-colors duration-200">
+              <span>📊</span>
+              <span>Member Dashboard</span>
             </Link>
           </div>
         </motion.div>
