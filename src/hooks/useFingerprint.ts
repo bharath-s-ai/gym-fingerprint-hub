@@ -5,7 +5,7 @@
  * hardware via IPC. Falls back to simulation in the browser.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface EsslBridge {
