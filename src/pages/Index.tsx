@@ -12,6 +12,7 @@ import { WarriorWelcome } from "@/components/gym/WarriorWelcome";
 import { HardwareStatusBar } from "@/components/gym/HardwareStatusBar";
 import { MemberProfilePanel } from "@/components/gym/MemberProfilePanel";
 import { useFingerprint } from "@/hooks/useFingerprint";
+import { useHardwareDemo } from "@/hooks/useHardwareDemo";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,8 @@ const Index = () => {
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
   const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs, reconnectAttempt, retryConnect } = useFingerprint();
+  const demo = useHardwareDemo();
+  const showDemoBar = !isHardware; // show demo bar in browser mode
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
@@ -375,14 +378,15 @@ const Index = () => {
 
       {/* Hardware Status Bar */}
       <HardwareStatusBar
-        isHardware={isHardware}
-        isConnected={isConnected}
+        isHardware={isHardware || showDemoBar}
+        isConnected={isHardware ? isConnected : demo.isConnected}
         deviceIp="192.168.1.201"
-        latencyMs={latencyMs}
-        reconnectAttempt={reconnectAttempt}
+        latencyMs={isHardware ? latencyMs : demo.latencyMs}
+        reconnectAttempt={isHardware ? reconnectAttempt : demo.reconnectAttempt}
+        maxReconnectAttempts={isHardware ? 10 : demo.maxReconnectAttempts}
         onHighLatency={() => play("warning")}
         onDisconnect={() => play("error")}
-        onManualReconnect={retryConnect}
+        onManualReconnect={isHardware ? retryConnect : demo.retryConnect}
       />
 
       <div className="flex-1 flex items-center justify-center p-6">
