@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wifi, WifiOff, Activity, AlertTriangle } from "lucide-react";
 
 const LATENCY_THRESHOLD = 80;
+const HISTORY_MAX = 12; // 12 samples × 5s = 60 seconds
 
 interface HardwareStatusBarProps {
   isHardware: boolean;
@@ -19,6 +20,56 @@ function getLatencyColor(ms: number): string {
   return "text-destructive";
 }
 
+function getLatencyStroke(ms: number): string {
+  if (ms < 30) return "hsl(var(--success))";
+  if (ms < LATENCY_THRESHOLD) return "hsl(var(--warning))";
+  return "hsl(var(--destructive))";
+}
+
+/** Tiny inline SVG sparkline */
+function Sparkline({ data, width = 64, height = 18 }: { data: number[]; width?: number; height?: number }) {
+  const path = useMemo(() => {
+    if (data.length < 2) return "";
+    const max = Math.max(...data, 1);
+    const stepX = width / (HISTORY_MAX - 1);
+    const points = data.map((v, i) => {
+      const x = i * stepX;
+      const y = height - (v / max) * (height - 2) - 1;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    return `M${points.join("L")}`;
+  }, [data, width, height]);
+
+  const lastVal = data[data.length - 1] ?? 0;
+
+  if (data.length < 2) return null;
+
+  return (
+    <svg width={width} height={height} className="inline-block" style={{ verticalAlign: "middle" }}>
+      <path
+        d={path}
+        fill="none"
+        stroke={getLatencyStroke(lastVal)}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={0.9}
+      />
+      {/* Threshold line */}
+      <line
+        x1={0}
+        y1={height - (LATENCY_THRESHOLD / Math.max(...data, 1)) * (height - 2) - 1}
+        x2={width}
+        y2={height - (LATENCY_THRESHOLD / Math.max(...data, 1)) * (height - 2) - 1}
+        stroke="hsl(var(--destructive))"
+        strokeWidth={0.5}
+        strokeDasharray="2,2"
+        opacity={0.4}
+      />
+    </svg>
+  );
+}
+
 export function HardwareStatusBar({
   isHardware,
   isConnected,
@@ -29,6 +80,22 @@ export function HardwareStatusBar({
 }: HardwareStatusBarProps) {
   const wasConnected = useRef(isConnected);
   const wasHighLatency = useRef(false);
+  const [history, setHistory] = useState<number[]>([]);
+
+  // Accumulate latency history
+  useEffect(() => {
+    if (latencyMs != null) {
+      setHistory((prev) => {
+        const next = [...prev, latencyMs];
+        return next.length > HISTORY_MAX ? next.slice(-HISTORY_MAX) : next;
+      });
+    }
+  }, [latencyMs]);
+
+  // Clear history on disconnect
+  useEffect(() => {
+    if (!isConnected) setHistory([]);
+  }, [isConnected]);
 
   // Fire disconnect callback when connection drops
   useEffect(() => {
@@ -92,6 +159,10 @@ export function HardwareStatusBar({
         <div className="flex items-center gap-3">
           {isConnected && deviceIp && (
             <span className="text-muted-foreground">{deviceIp}</span>
+          )}
+          {/* Sparkline */}
+          {isConnected && history.length >= 2 && (
+            <Sparkline data={history} />
           )}
           {isConnected && latencyMs != null && (
             <div className={`flex items-center gap-1 ${getLatencyColor(latencyMs)}`}>
