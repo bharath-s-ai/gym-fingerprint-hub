@@ -372,6 +372,7 @@ const Index = () => {
         isConnected={isConnected}
         deviceIp="192.168.1.201"
         latencyMs={latencyMs}
+        reconnectAttempt={reconnectAttempt}
         onHighLatency={() => play("warning")}
         onDisconnect={() => play("error")}
       />
