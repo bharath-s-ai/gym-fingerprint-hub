@@ -43,6 +43,7 @@ export function useFingerprint() {
   const [isScanning, setIsScanning] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
   // Listen for hardware events
   useEffect(() => {
