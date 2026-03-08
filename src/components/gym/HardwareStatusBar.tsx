@@ -156,6 +156,11 @@ export function HardwareStatusBar({
               RECONNECTING...
             </motion.span>
           )}
+          {!isConnected && reconnectAttempt > 0 && (
+            <span className="text-destructive/60 text-[10px]">
+              Attempt {reconnectAttempt}/10
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
