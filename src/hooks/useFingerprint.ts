@@ -44,6 +44,10 @@ export function useFingerprint() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const maxReconnectAttempts = 10;
+  const lastConnectArgs = useRef<{ ip?: string; port?: number }>({});
 
   // Listen for hardware events
   useEffect(() => {
