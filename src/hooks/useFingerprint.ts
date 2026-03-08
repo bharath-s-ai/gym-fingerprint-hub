@@ -5,7 +5,7 @@
  * hardware via IPC. Falls back to simulation in the browser.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface EsslBridge {
@@ -44,15 +44,20 @@ export function useFingerprint() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const maxReconnectAttempts = 10;
+  const lastConnectArgs = useRef<{ ip?: string; port?: number }>({});
 
   // Listen for hardware events
   useEffect(() => {
     if (!essl) return;
     const cleanupScanning = essl.onScanning(setIsScanning);
     const cleanupStatus = essl.onStatus((status) => {
-      setIsConnected(status === "connected");
+      const connected = status === "connected";
+      setIsConnected(connected);
+      if (connected) setReconnectAttempt(0); // reset on successful connection
     });
-    // Check initial status
     essl.status().then((res) => {
       if (res.success) setIsConnected(res.connected);
     });
@@ -61,6 +66,33 @@ export function useFingerprint() {
       cleanupStatus();
     };
   }, [essl]);
+
+  // Auto-reconnect when disconnected (exponential backoff: 2s, 4s, 8s… capped at 30s)
+  useEffect(() => {
+    if (!essl || isConnected || !isInitialized) return;
+    if (reconnectAttempt >= maxReconnectAttempts) {
+      setDeviceError(`Reconnect failed after ${maxReconnectAttempts} attempts`);
+      return;
+    }
+
+    const delay = Math.min(2000 * Math.pow(2, reconnectAttempt), 30000);
+    reconnectTimer.current = setTimeout(async () => {
+      try {
+        const result = await essl.connect(lastConnectArgs.current);
+        if (result.success) {
+          setIsConnected(true);
+          setDeviceError(null);
+          setReconnectAttempt(0);
+        } else {
+          setReconnectAttempt((a) => a + 1);
+        }
+      } catch {
+        setReconnectAttempt((a) => a + 1);
+      }
+    }, delay);
+
+    return () => clearTimeout(reconnectTimer.current);
+  }, [essl, isConnected, isInitialized, reconnectAttempt]);
 
   // Periodic latency ping (every 5s when connected)
   useEffect(() => {
@@ -92,6 +124,8 @@ export function useFingerprint() {
   // ── Connect (hardware or simulated init) ──────────────────────────────
   const connect = useCallback(async (ip?: string, port?: number) => {
     setDeviceError(null);
+    setReconnectAttempt(0);
+    lastConnectArgs.current = { ip, port };
     if (essl) {
       const result = await essl.connect({ ip, port });
       if (!result.success) {
@@ -200,6 +234,7 @@ export function useFingerprint() {
     isHardware,
     deviceError,
     latencyMs,
+    reconnectAttempt,
     // Fingerprint operations
     capture,
     enroll,

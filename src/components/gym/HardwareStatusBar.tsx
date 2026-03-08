@@ -10,6 +10,7 @@ interface HardwareStatusBarProps {
   isConnected: boolean;
   deviceIp?: string;
   latencyMs?: number | null;
+  reconnectAttempt?: number;
   onHighLatency?: () => void;
   onDisconnect?: () => void;
 }
@@ -75,6 +76,7 @@ export function HardwareStatusBar({
   isConnected,
   deviceIp,
   latencyMs,
+  reconnectAttempt = 0,
   onHighLatency,
   onDisconnect,
 }: HardwareStatusBarProps) {
@@ -153,6 +155,11 @@ export function HardwareStatusBar({
             >
               RECONNECTING...
             </motion.span>
+          )}
+          {!isConnected && reconnectAttempt > 0 && (
+            <span className="text-destructive/60 text-[10px]">
+              Attempt {reconnectAttempt}/10
+            </span>
           )}
         </div>
 

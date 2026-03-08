@@ -110,7 +110,7 @@ const Index = () => {
 
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
-  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs } = useFingerprint();
+  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs, reconnectAttempt } = useFingerprint();
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
@@ -372,6 +372,7 @@ const Index = () => {
         isConnected={isConnected}
         deviceIp="192.168.1.201"
         latencyMs={latencyMs}
+        reconnectAttempt={reconnectAttempt}
         onHighLatency={() => play("warning")}
         onDisconnect={() => play("error")}
       />
