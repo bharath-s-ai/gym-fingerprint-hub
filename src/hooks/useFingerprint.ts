@@ -225,6 +225,11 @@ export function useFingerprint() {
     return { success: false, found: false, ip: null, port: null };
   }, [essl]);
 
+  const retryConnect = useCallback(() => {
+    setReconnectAttempt(0);
+    setDeviceError(null);
+  }, []);
+
   return {
     // Connection
     initialize,
@@ -235,6 +240,7 @@ export function useFingerprint() {
     deviceError,
     latencyMs,
     reconnectAttempt,
+    retryConnect,
     // Fingerprint operations
     capture,
     enroll,
