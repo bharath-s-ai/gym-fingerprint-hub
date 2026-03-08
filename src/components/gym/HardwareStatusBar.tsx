@@ -129,7 +129,7 @@ export function HardwareStatusBar({
   return (
     <div className="relative">
       <div
-        className={`w-full h-8 flex items-center justify-between px-4 text-[11px] font-semibold uppercase tracking-wider transition-colors duration-300 ${
+        className={`w-full min-h-8 flex items-center justify-between px-2 sm:px-4 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-colors duration-300 flex-wrap gap-y-0.5 ${
           !isConnected
             ? "bg-destructive/10 border-b border-destructive/20 text-destructive"
             : isHighLatency

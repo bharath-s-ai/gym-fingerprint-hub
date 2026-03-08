@@ -357,7 +357,7 @@ const Index = () => {
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           className="mb-10 relative z-10"
         >
-          <Fingerprint className="w-28 h-28 text-primary drop-shadow-[0_0_30px_hsl(25_95%_53%/0.4)]" />
+          <Fingerprint className="w-20 h-20 sm:w-28 sm:h-28 text-primary drop-shadow-[0_0_30px_hsl(25_95%_53%/0.4)]" />
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -422,12 +422,12 @@ const Index = () => {
           className="w-full max-w-lg glass-card rounded-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="relative bg-gradient-to-r from-primary via-primary to-primary/90 px-5 py-4 flex items-center gap-3 overflow-hidden">
+          <div className="relative bg-gradient-to-r from-primary via-primary to-primary/90 px-3 sm:px-5 py-3 sm:py-4 flex items-center gap-2 sm:gap-3 overflow-hidden">
             {/* Subtle diagonal accent */}
             <div className="absolute -right-4 -top-4 w-32 h-32 bg-primary-foreground/5 rounded-full blur-2xl pointer-events-none" />
             <img src={logo} alt="F2F Logo" className="w-11 h-11 object-contain rounded-lg border border-primary-foreground/10 relative z-10" />
             <div className="flex-1 relative z-10">
-              <h1 className="text-xl font-black text-primary-foreground tracking-tight uppercase leading-none">
+              <h1 className="text-base sm:text-xl font-black text-primary-foreground tracking-tight uppercase leading-none">
                 F2F Fitness
               </h1>
               <p className="text-primary-foreground/60 text-[10px] font-bold uppercase tracking-[0.25em] mt-0.5">
@@ -443,22 +443,22 @@ const Index = () => {
           </div>
 
           {/* Mode Toggle */}
-          <div className="p-6 pb-0">
+          <div className="p-4 sm:p-6 pb-0">
             <ModeToggle currentMode={mode} onModeChange={setMode} />
           </div>
 
           {/* Scanner */}
-          <div className="py-8">
+          <div className="py-5 sm:py-8">
             <FingerprintScanner isScanning={isScanning} mode={mode} status={scannerStatus} />
           </div>
 
           {/* Status */}
-          <div className="px-6">
+          <div className="px-4 sm:px-6">
             <StatusDisplay message={status.message} type={status.type} />
           </div>
 
           {/* Actions */}
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
             {mode === "enrollment" ? (
               <div className="space-y-3">
                 <EnrollmentForm onSubmit={handleEnrollment} isProcessing={isScanning} />

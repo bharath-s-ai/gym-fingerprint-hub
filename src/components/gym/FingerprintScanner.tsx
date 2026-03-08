@@ -32,7 +32,7 @@ export function FingerprintScanner({ isScanning, mode, status = "idle" }: Finger
     : "text-primary";
 
   return (
-    <div className="relative w-56 h-56 mx-auto">
+    <div className="relative w-40 h-40 sm:w-56 sm:h-56 mx-auto">
       {/* Ambient glow backdrop */}
       <div
         className={`absolute -inset-8 rounded-full blur-3xl transition-opacity duration-700 ${
@@ -80,9 +80,9 @@ export function FingerprintScanner({ isScanning, mode, status = "idle" }: Finger
           className={isError ? "animate-shake" : ""}
         >
           {mode === "enrollment" ? (
-            <UserPlus className={`w-16 h-16 ${iconColor} transition-colors duration-300 drop-shadow-lg`} />
+            <UserPlus className={`w-10 h-10 sm:w-16 sm:h-16 ${iconColor} transition-colors duration-300 drop-shadow-lg`} />
           ) : (
-            <Fingerprint className={`w-16 h-16 ${iconColor} transition-colors duration-300 drop-shadow-lg`} />
+            <Fingerprint className={`w-10 h-10 sm:w-16 sm:h-16 ${iconColor} transition-colors duration-300 drop-shadow-lg`} />
           )}
         </motion.div>
       </motion.div>
