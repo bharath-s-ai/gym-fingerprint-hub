@@ -43,6 +43,7 @@ export function useFingerprint() {
   const [isScanning, setIsScanning] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
   // Listen for hardware events
   useEffect(() => {
@@ -60,6 +61,33 @@ export function useFingerprint() {
       cleanupStatus();
     };
   }, [essl]);
+
+  // Periodic latency ping (every 5s when connected)
+  useEffect(() => {
+    if (!isConnected) {
+      setLatencyMs(null);
+      return;
+    }
+
+    const ping = async () => {
+      const start = performance.now();
+      try {
+        if (essl) {
+          await essl.status();
+        } else {
+          // Simulation: fake 5-25ms latency
+          await new Promise((r) => setTimeout(r, 5 + Math.random() * 20));
+        }
+        setLatencyMs(Math.round(performance.now() - start));
+      } catch {
+        setLatencyMs(null);
+      }
+    };
+
+    ping(); // immediate first ping
+    const interval = setInterval(ping, 5000);
+    return () => clearInterval(interval);
+  }, [essl, isConnected]);
 
   // ── Connect (hardware or simulated init) ──────────────────────────────
   const connect = useCallback(async (ip?: string, port?: number) => {
@@ -171,6 +199,7 @@ export function useFingerprint() {
     isInitialized,
     isHardware,
     deviceError,
+    latencyMs,
     // Fingerprint operations
     capture,
     enroll,

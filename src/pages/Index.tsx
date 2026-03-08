@@ -110,7 +110,7 @@ const Index = () => {
 
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
-  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError } = useFingerprint();
+  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs } = useFingerprint();
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
@@ -371,6 +371,7 @@ const Index = () => {
         isHardware={isHardware}
         isConnected={isConnected}
         deviceIp="192.168.1.201"
+        latencyMs={latencyMs}
       />
 
       <div className="flex-1 flex items-center justify-center p-6">
