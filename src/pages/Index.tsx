@@ -379,7 +379,12 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen gradient-bg flex flex-col relative">
+    <div className="min-h-screen gradient-bg flex flex-col relative overflow-hidden">
+      {/* Ambient top glow */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-[120px] pointer-events-none"
+        style={{ background: "radial-gradient(ellipse, hsl(25 95% 53% / 0.07) 0%, transparent 70%)" }}
+      />
       <HiddenAdminCorner onUnlock={() => navigate("/dashboard")} />
       <IdleCountdownModal secondsLeft={countdown} onDismiss={resetIdleTimer} />
       <WarriorWelcome visible={welcomeVisible} {...welcomeData} />
