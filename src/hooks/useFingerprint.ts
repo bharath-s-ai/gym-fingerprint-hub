@@ -124,6 +124,8 @@ export function useFingerprint() {
   // ── Connect (hardware or simulated init) ──────────────────────────────
   const connect = useCallback(async (ip?: string, port?: number) => {
     setDeviceError(null);
+    setReconnectAttempt(0);
+    lastConnectArgs.current = { ip, port };
     if (essl) {
       const result = await essl.connect({ ip, port });
       if (!result.success) {
