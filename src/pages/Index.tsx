@@ -334,32 +334,57 @@ const Index = () => {
   if (isIdle) {
     return (
       <div
-        className="min-h-screen gradient-bg flex flex-col items-center justify-center p-6 cursor-pointer"
+        className="min-h-screen gradient-bg flex flex-col items-center justify-center p-6 cursor-pointer relative overflow-hidden"
         onClick={resetIdleTimer}
         onTouchStart={resetIdleTimer}
       >
-        <img src={logo} alt="F2F Logo" className="w-40 h-40 object-contain mb-8" />
+        {/* Ambient orb */}
+        <div
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[120px] animate-glow-pulse pointer-events-none"
+          style={{ background: "radial-gradient(circle, hsl(25 95% 53% / 0.1) 0%, transparent 70%)" }}
+        />
+
+        <motion.img
+          src={logo}
+          alt="F2F Logo"
+          className="w-32 h-32 object-contain mb-6 relative z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        />
         <motion.div
-          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-          className="mb-8"
+          animate={{ scale: [1, 1.08, 1], opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          className="mb-10 relative z-10"
         >
-          <Fingerprint className="w-24 h-24 text-primary" />
+          <Fingerprint className="w-28 h-28 text-primary drop-shadow-[0_0_30px_hsl(25_95%_53%/0.4)]" />
         </motion.div>
         <motion.div
-          animate={{ scale: [1, 1.05, 1], opacity: [0.7, 1, 0.7] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="relative z-10"
         >
-          <Button className="bg-primary text-primary-foreground px-12 py-6 text-xl font-bold uppercase tracking-widest hover:bg-primary/90 rounded-lg">
-            Tap to Start
-          </Button>
+          <motion.div
+            animate={{ scale: [1, 1.03, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Button className="bg-primary text-primary-foreground px-14 py-7 text-xl font-black uppercase tracking-[0.2em] hover:bg-primary/90 rounded-xl glow-primary transition-shadow duration-300 hover:glow-primary-intense">
+              Tap to Start
+            </Button>
+          </motion.div>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen gradient-bg flex flex-col relative">
+    <div className="min-h-screen gradient-bg flex flex-col relative overflow-hidden">
+      {/* Ambient top glow */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-[120px] pointer-events-none"
+        style={{ background: "radial-gradient(ellipse, hsl(25 95% 53% / 0.07) 0%, transparent 70%)" }}
+      />
       <HiddenAdminCorner onUnlock={() => navigate("/dashboard")} />
       <IdleCountdownModal secondsLeft={countdown} onDismiss={resetIdleTimer} />
       <WarriorWelcome visible={welcomeVisible} {...welcomeData} />
@@ -389,25 +414,27 @@ const Index = () => {
         onManualReconnect={isHardware ? retryConnect : demo.retryConnect}
       />
 
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
         <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="w-full max-w-lg glass-card rounded-lg overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full max-w-lg glass-card rounded-2xl overflow-hidden"
         >
-          {/* Header — compact */}
-          <div className="bg-primary px-5 py-3 flex items-center gap-3">
-            <img src={logo} alt="F2F Logo" className="w-10 h-10 object-contain rounded-md" />
-            <div className="flex-1">
-              <h1 className="text-lg font-black text-primary-foreground tracking-tight uppercase leading-tight">
+          {/* Header */}
+          <div className="relative bg-gradient-to-r from-primary via-primary to-primary/90 px-5 py-4 flex items-center gap-3 overflow-hidden">
+            {/* Subtle diagonal accent */}
+            <div className="absolute -right-4 -top-4 w-32 h-32 bg-primary-foreground/5 rounded-full blur-2xl pointer-events-none" />
+            <img src={logo} alt="F2F Logo" className="w-11 h-11 object-contain rounded-lg border border-primary-foreground/10 relative z-10" />
+            <div className="flex-1 relative z-10">
+              <h1 className="text-xl font-black text-primary-foreground tracking-tight uppercase leading-none">
                 F2F Fitness
               </h1>
-              <p className="text-primary-foreground/70 text-[10px] font-semibold uppercase tracking-widest">
+              <p className="text-primary-foreground/60 text-[10px] font-bold uppercase tracking-[0.25em] mt-0.5">
                 Attendance System
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 relative z-10">
               <AutoStartToggle />
               <AlwaysOnTopToggle />
               <MuteToggle muted={muted} onToggle={toggleMute} />
@@ -449,7 +476,7 @@ const Index = () => {
               <Button
                 onClick={handleCheckIn}
                 disabled={isScanning}
-                className="w-full h-14 bg-primary text-primary-foreground font-black text-lg uppercase tracking-[0.15em] rounded-lg hover:bg-primary/90 hover:scale-[1.02] hover:shadow-[0_0_30px_hsl(25_95%_53%/0.3)] transition-all duration-200 active:scale-[0.98]"
+                className="w-full h-16 bg-primary text-primary-foreground font-black text-lg uppercase tracking-[0.2em] rounded-xl hover:bg-primary/90 hover:scale-[1.02] transition-all duration-200 active:scale-[0.98] glow-primary hover:glow-primary-intense"
               >
                 {isScanning ? "SCANNING..." : "START CHECK-IN"}
               </Button>
@@ -470,9 +497,10 @@ const Index = () => {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-primary/20 p-4 text-center">
-            <Link to="/dashboard" className="text-muted-foreground text-xs font-semibold uppercase tracking-wider hover:text-primary transition-colors">
-              📊 Member Dashboard
+          <div className="border-t border-primary/10 px-5 py-3.5 flex items-center justify-center">
+            <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-[0.2em] hover:text-primary transition-colors duration-200">
+              <span>📊</span>
+              <span>Member Dashboard</span>
             </Link>
           </div>
         </motion.div>
