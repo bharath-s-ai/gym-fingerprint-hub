@@ -112,7 +112,7 @@ const Index = () => {
 
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
-  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs, reconnectAttempt } = useFingerprint();
+  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs, reconnectAttempt, retryConnect } = useFingerprint();
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
@@ -382,6 +382,7 @@ const Index = () => {
         reconnectAttempt={reconnectAttempt}
         onHighLatency={() => play("warning")}
         onDisconnect={() => play("error")}
+        onManualReconnect={retryConnect}
       />
 
       <div className="flex-1 flex items-center justify-center p-6">
