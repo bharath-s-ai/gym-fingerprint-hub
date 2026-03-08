@@ -360,6 +360,11 @@ const Index = () => {
       <HiddenAdminCorner onUnlock={() => navigate("/dashboard")} />
       <IdleCountdownModal secondsLeft={countdown} onDismiss={resetIdleTimer} />
       <WarriorWelcome visible={welcomeVisible} {...welcomeData} />
+      <MemberProfilePanel
+        member={profileMember}
+        onClose={() => setProfileMember(null)}
+        onUpdate={() => setProfileMember(null)}
+      />
       <DeviceConnectionDialog
         open={showConnectionDialog}
         onOpenChange={setShowConnectionDialog}
