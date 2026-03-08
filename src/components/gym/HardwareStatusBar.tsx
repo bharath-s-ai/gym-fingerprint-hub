@@ -10,6 +10,7 @@ interface HardwareStatusBarProps {
   isConnected: boolean;
   deviceIp?: string;
   latencyMs?: number | null;
+  reconnectAttempt?: number;
   onHighLatency?: () => void;
   onDisconnect?: () => void;
 }
