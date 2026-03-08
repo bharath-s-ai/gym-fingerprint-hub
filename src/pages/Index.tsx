@@ -114,6 +114,8 @@ const Index = () => {
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
   const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs, reconnectAttempt, retryConnect } = useFingerprint();
+  const demo = useHardwareDemo();
+  const showDemoBar = !isHardware; // show demo bar in browser mode
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
