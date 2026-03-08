@@ -378,14 +378,15 @@ const Index = () => {
 
       {/* Hardware Status Bar */}
       <HardwareStatusBar
-        isHardware={isHardware}
-        isConnected={isConnected}
+        isHardware={isHardware || showDemoBar}
+        isConnected={isHardware ? isConnected : demo.isConnected}
         deviceIp="192.168.1.201"
-        latencyMs={latencyMs}
-        reconnectAttempt={reconnectAttempt}
+        latencyMs={isHardware ? latencyMs : demo.latencyMs}
+        reconnectAttempt={isHardware ? reconnectAttempt : demo.reconnectAttempt}
+        maxReconnectAttempts={isHardware ? 10 : demo.maxReconnectAttempts}
         onHighLatency={() => play("warning")}
         onDisconnect={() => play("error")}
-        onManualReconnect={retryConnect}
+        onManualReconnect={isHardware ? retryConnect : demo.retryConnect}
       />
 
       <div className="flex-1 flex items-center justify-center p-6">
