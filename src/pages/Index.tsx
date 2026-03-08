@@ -10,6 +10,7 @@ import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
 import { DeviceConnectionDialog } from "@/components/gym/DeviceConnectionDialog";
 import { WarriorWelcome } from "@/components/gym/WarriorWelcome";
 import { HardwareStatusBar } from "@/components/gym/HardwareStatusBar";
+import { MemberProfilePanel } from "@/components/gym/MemberProfilePanel";
 import { useFingerprint } from "@/hooks/useFingerprint";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -107,6 +108,7 @@ const Index = () => {
   const [welcomeData, setWelcomeData] = useState({ name: "", memberId: null as number | null, daysRemaining: 0, streak: 0, totalVisits: 0 });
   // Member stats for card
   const [memberStats, setMemberStats] = useState({ totalVisits: 0, lastCheckIn: null as string | null, streak: 0 });
+  const [profileMember, setProfileMember] = useState<Member | null>(null);
 
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
@@ -358,6 +360,11 @@ const Index = () => {
       <HiddenAdminCorner onUnlock={() => navigate("/dashboard")} />
       <IdleCountdownModal secondsLeft={countdown} onDismiss={resetIdleTimer} />
       <WarriorWelcome visible={welcomeVisible} {...welcomeData} />
+      <MemberProfilePanel
+        member={profileMember}
+        onClose={() => setProfileMember(null)}
+        onUpdate={() => setProfileMember(null)}
+      />
       <DeviceConnectionDialog
         open={showConnectionDialog}
         onOpenChange={setShowConnectionDialog}
@@ -445,12 +452,14 @@ const Index = () => {
 
             <AnimatePresence>
               {member && (
-                <MemberCard
-                  member={member}
-                  totalVisits={memberStats.totalVisits}
-                  lastCheckIn={memberStats.lastCheckIn}
-                  streak={memberStats.streak}
-                />
+                <div className="cursor-pointer" onClick={() => setProfileMember(member)}>
+                  <MemberCard
+                    member={member}
+                    totalVisits={memberStats.totalVisits}
+                    lastCheckIn={memberStats.lastCheckIn}
+                    streak={memberStats.streak}
+                  />
+                </div>
               )}
             </AnimatePresence>
           </div>

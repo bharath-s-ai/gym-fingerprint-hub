@@ -10,11 +10,12 @@ interface Member {
   id: string;
   name: string;
   phone: string;
-  email: string | null;
-  joining_date: string | null;
+  email?: string | null;
+  member_id?: number | null;
+  joining_date?: string | null;
   expiry_date: string;
-  active: boolean | null;
-  fingerprint_template: string | null;
+  active?: boolean | null;
+  fingerprint_template?: string | null;
 }
 
 interface MemberProfilePanelProps {
