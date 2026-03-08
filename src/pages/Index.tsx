@@ -434,7 +434,7 @@ const Index = () => {
         onManualReconnect={isHardware ? retryConnect : demo.retryConnect}
       />
 
-      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+      <div className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -18,7 +18,7 @@ export function ModeToggle({ currentMode, onModeChange }: ModeToggleProps) {
         <button
           key={mode.id}
           onClick={() => onModeChange(mode.id)}
-          className={`relative flex-1 py-3 px-4 rounded-lg font-black text-sm uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 min-h-[52px] ${
+          className={`relative flex-1 py-3 px-2 sm:px-4 rounded-lg font-black text-[11px] sm:text-sm uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-1.5 sm:gap-2 min-h-[52px] ${
             currentMode === mode.id ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
