@@ -13,21 +13,21 @@ const modes = [
 
 export function ModeToggle({ currentMode, onModeChange }: ModeToggleProps) {
   return (
-    <div className="flex rounded-lg bg-muted/50 p-1 border border-border">
+    <div className="flex rounded-xl bg-black/60 p-1 border border-border/60 backdrop-blur-sm">
       {modes.map((mode) => (
         <button
           key={mode.id}
           onClick={() => onModeChange(mode.id)}
-          className={`relative flex-1 py-3 px-4 rounded-md font-bold text-sm uppercase tracking-wider transition-colors duration-200 flex items-center justify-center gap-2 min-h-[48px] ${
+          className={`relative flex-1 py-3 px-4 rounded-lg font-black text-sm uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 min-h-[52px] ${
             currentMode === mode.id ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {currentMode === mode.id && (
             <motion.div
               layoutId="activeMode"
-              className="absolute inset-0 bg-primary rounded-md"
-              style={{ boxShadow: "0 0 20px hsl(25 95% 53% / 0.3)" }}
-              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              className="absolute inset-0 bg-primary rounded-lg"
+              style={{ boxShadow: "0 0 30px hsl(25 95% 53% / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.1)" }}
+              transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
             />
           )}
           <mode.icon className="relative z-10 w-4 h-4" />
