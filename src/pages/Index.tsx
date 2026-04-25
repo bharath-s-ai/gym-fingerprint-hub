@@ -102,7 +102,7 @@ const Index = () => {
   const [isIdle, setIsIdle] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [enrollProgress, setEnrollProgress] = useState(0);
-  const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  const [isSyncingLogs, setIsSyncingLogs] = useState(false);
   // Welcome overlay state
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [welcomeData, setWelcomeData] = useState({ name: "", memberId: null as number | null, daysRemaining: 0, streak: 0, totalVisits: 0 });
@@ -112,9 +112,17 @@ const Index = () => {
 
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
-  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs, reconnectAttempt, retryConnect } = useFingerprint();
-  const demo = useHardwareDemo();
-  const showDemoBar = !isHardware; // show demo bar in browser mode
+  const {
+    status: deviceStatus,
+    error: deviceError,
+    settings: deviceSettings,
+    bridgeReady,
+    isConnected,
+    connect,
+    enroll: enrollOnDevice,
+    verify: verifyOnDevice,
+    fetchLogs,
+  } = useFingerprint();
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
