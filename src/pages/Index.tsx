@@ -1,18 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { FingerprintScanner } from "@/components/gym/FingerprintScanner";
 import { ModeToggle } from "@/components/gym/ModeToggle";
 import { StatusDisplay, type StatusType } from "@/components/gym/StatusDisplay";
 import { MemberCard } from "@/components/gym/MemberCard";
 import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
-import { DeviceConnectionDialog } from "@/components/gym/DeviceConnectionDialog";
 import { WarriorWelcome } from "@/components/gym/WarriorWelcome";
 import { HardwareStatusBar } from "@/components/gym/HardwareStatusBar";
 import { MemberProfilePanel } from "@/components/gym/MemberProfilePanel";
 import { useFingerprint } from "@/hooks/useFingerprint";
-import { useHardwareDemo } from "@/hooks/useHardwareDemo";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { HiddenAdminCorner, IdleCountdownModal, FullscreenToggle, AlwaysOnTopToggle, AutoStartToggle } from "@/components/gym/KioskControls";
 import { MuteToggle } from "@/components/gym/MuteToggle";
 import { useElectron } from "@/hooks/useElectron";
-import { Fingerprint } from "lucide-react";
+import { Fingerprint, Settings as SettingsIcon, RefreshCw } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
 import { differenceInDays, subDays, format } from "date-fns";
 
