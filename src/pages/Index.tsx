@@ -557,6 +557,17 @@ const Index = () => {
               </Button>
             )}
 
+            {/* Sync attendance logs from device */}
+            <Button
+              onClick={handleSyncLogs}
+              disabled={isSyncingLogs || !isConnected}
+              variant="outline"
+              className="w-full gap-2 font-bold uppercase tracking-wider"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncingLogs ? "animate-spin" : ""}`} />
+              {isSyncingLogs ? "Syncing..." : "Sync Device Logs"}
+            </Button>
+
             <AnimatePresence>
               {member && (
                 <div className="cursor-pointer" onClick={() => setProfileMember(member)}>
@@ -572,10 +583,14 @@ const Index = () => {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-primary/10 px-5 py-3.5 flex items-center justify-center">
+          <div className="border-t border-primary/10 px-5 py-3.5 flex items-center justify-between gap-3">
             <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-[0.2em] hover:text-primary transition-colors duration-200">
               <span>📊</span>
-              <span>Member Dashboard</span>
+              <span>Dashboard</span>
+            </Link>
+            <Link to="/settings" className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-[0.2em] hover:text-primary transition-colors duration-200">
+              <SettingsIcon className="w-3.5 h-3.5" />
+              <span>Settings</span>
             </Link>
           </div>
         </motion.div>
