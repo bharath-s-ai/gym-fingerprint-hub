@@ -391,7 +391,7 @@ const Index = () => {
     } finally {
       setIsScanning(false);
     }
-  }, [isScanning, capture, match, play, showWelcomeOverlay]);
+  }, [isScanning, verifyOnDevice, isConnected, play, showWelcomeOverlay]);
 
   // Idle screen
   if (isIdle) {
