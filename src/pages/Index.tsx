@@ -476,26 +476,18 @@ const Index = () => {
         onClose={() => setProfileMember(null)}
         onUpdate={() => setProfileMember(null)}
       />
-      <DeviceConnectionDialog
-        open={showConnectionDialog}
-        onOpenChange={setShowConnectionDialog}
-        onConnect={async (ip, port) => { await connect(ip, port); }}
-        onAutoDetect={async () => autoDetect()}
-        error={deviceError}
-      />
 
       {/* Hardware Status Bar */}
       <HardwareStatusBar
-        isHardware={isHardware || showDemoBar}
-        isConnected={isHardware ? isConnected : demo.isConnected}
-        deviceIp="192.168.1.201"
-        latencyMs={isHardware ? latencyMs : demo.latencyMs}
-        reconnectAttempt={isHardware ? reconnectAttempt : demo.reconnectAttempt}
-        maxReconnectAttempts={isHardware ? 10 : demo.maxReconnectAttempts}
-        onHighLatency={() => play("warning")}
-        onDisconnect={() => play("error")}
-        onManualReconnect={isHardware ? retryConnect : demo.retryConnect}
+        status={deviceStatus}
+        deviceIp={deviceSettings.ip || undefined}
+        errorMessage={deviceError}
+        onRetry={() => {
+          connect().catch((e) => toast.error(e?.message ?? "Connection failed"));
+        }}
+        onOpenSettings={() => navigate("/settings")}
       />
+
 
       <div className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10">
         <motion.div
