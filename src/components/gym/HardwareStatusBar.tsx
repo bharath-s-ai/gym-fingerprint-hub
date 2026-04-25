@@ -1,214 +1,85 @@
-import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wifi, WifiOff, Activity, AlertTriangle } from "lucide-react";
-
-const LATENCY_THRESHOLD = 80;
-const HISTORY_MAX = 12; // 12 samples × 5s = 60 seconds
+import { Wifi, WifiOff, Loader2, AlertTriangle, Settings as SettingsIcon, RefreshCw } from "lucide-react";
+import type { DeviceStatus } from "@/hooks/useFingerprint";
 
 interface HardwareStatusBarProps {
-  isHardware: boolean;
-  isConnected: boolean;
+  status: DeviceStatus;
   deviceIp?: string;
-  latencyMs?: number | null;
-  reconnectAttempt?: number;
-  maxReconnectAttempts?: number;
-  onHighLatency?: () => void;
-  onDisconnect?: () => void;
-  onManualReconnect?: () => void;
+  errorMessage?: string | null;
+  onRetry?: () => void;
+  onOpenSettings?: () => void;
 }
 
-function getLatencyColor(ms: number): string {
-  if (ms < 30) return "text-success";
-  if (ms < LATENCY_THRESHOLD) return "text-warning";
-  return "text-destructive";
-}
-
-function getLatencyStroke(ms: number): string {
-  if (ms < 30) return "hsl(var(--success))";
-  if (ms < LATENCY_THRESHOLD) return "hsl(var(--warning))";
-  return "hsl(var(--destructive))";
-}
-
-/** Tiny inline SVG sparkline */
-function Sparkline({ data, width = 64, height = 18 }: { data: number[]; width?: number; height?: number }) {
-  const path = useMemo(() => {
-    if (data.length < 2) return "";
-    const max = Math.max(...data, 1);
-    const stepX = width / (HISTORY_MAX - 1);
-    const points = data.map((v, i) => {
-      const x = i * stepX;
-      const y = height - (v / max) * (height - 2) - 1;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    });
-    return `M${points.join("L")}`;
-  }, [data, width, height]);
-
-  const lastVal = data[data.length - 1] ?? 0;
-
-  if (data.length < 2) return null;
-
-  return (
-    <svg width={width} height={height} className="inline-block" style={{ verticalAlign: "middle" }}>
-      <path
-        d={path}
-        fill="none"
-        stroke={getLatencyStroke(lastVal)}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity={0.9}
-      />
-      {/* Threshold line */}
-      <line
-        x1={0}
-        y1={height - (LATENCY_THRESHOLD / Math.max(...data, 1)) * (height - 2) - 1}
-        x2={width}
-        y2={height - (LATENCY_THRESHOLD / Math.max(...data, 1)) * (height - 2) - 1}
-        stroke="hsl(var(--destructive))"
-        strokeWidth={0.5}
-        strokeDasharray="2,2"
-        opacity={0.4}
-      />
-    </svg>
-  );
-}
+const STATUS_META: Record<DeviceStatus, { label: string; tone: "success" | "warning" | "destructive" | "muted" }> = {
+  connected: { label: "Connected", tone: "success" },
+  connecting: { label: "Connecting…", tone: "warning" },
+  error: { label: "Error", tone: "destructive" },
+  disconnected: { label: "Disconnected", tone: "muted" },
+};
 
 export function HardwareStatusBar({
-  isHardware,
-  isConnected,
+  status,
   deviceIp,
-  latencyMs,
-  reconnectAttempt = 0,
-  maxReconnectAttempts = 10,
-  onHighLatency,
-  onDisconnect,
-  onManualReconnect,
+  errorMessage,
+  onRetry,
+  onOpenSettings,
 }: HardwareStatusBarProps) {
-  const wasConnected = useRef(isConnected);
-  const wasHighLatency = useRef(false);
-  const [history, setHistory] = useState<number[]>([]);
+  const meta = STATUS_META[status];
+  const showAlert = status === "error" || status === "disconnected";
 
-  // Accumulate latency history
-  useEffect(() => {
-    if (latencyMs != null) {
-      setHistory((prev) => {
-        const next = [...prev, latencyMs];
-        return next.length > HISTORY_MAX ? next.slice(-HISTORY_MAX) : next;
-      });
-    }
-  }, [latencyMs]);
-
-  // Clear history on disconnect
-  useEffect(() => {
-    if (!isConnected) setHistory([]);
-  }, [isConnected]);
-
-  // Fire disconnect callback when connection drops
-  useEffect(() => {
-    if (wasConnected.current && !isConnected) {
-      onDisconnect?.();
-    }
-    wasConnected.current = isConnected;
-  }, [isConnected, onDisconnect]);
-
-  // Fire high-latency callback when threshold exceeded
-  useEffect(() => {
-    if (latencyMs != null && latencyMs >= LATENCY_THRESHOLD && !wasHighLatency.current) {
-      wasHighLatency.current = true;
-      onHighLatency?.();
-    } else if (latencyMs != null && latencyMs < LATENCY_THRESHOLD) {
-      wasHighLatency.current = false;
-    }
-  }, [latencyMs, onHighLatency]);
-
-  if (!isHardware) return null;
-
-  const isHighLatency = latencyMs != null && latencyMs >= LATENCY_THRESHOLD;
-  const barAlert = !isConnected || isHighLatency;
+  const toneClasses =
+    meta.tone === "success"
+      ? "bg-success/10 border-success/20 text-success"
+      : meta.tone === "warning"
+        ? "bg-warning/10 border-warning/20 text-warning"
+        : meta.tone === "destructive"
+          ? "bg-destructive/10 border-destructive/20 text-destructive"
+          : "bg-muted/30 border-border text-muted-foreground";
 
   return (
     <div className="relative">
       <div
-        className={`w-full min-h-8 flex items-center justify-between px-2 sm:px-4 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-colors duration-300 flex-wrap gap-y-0.5 ${
-          !isConnected
-            ? "bg-destructive/10 border-b border-destructive/20 text-destructive"
-            : isHighLatency
-              ? "bg-warning/10 border-b border-warning/20 text-warning"
-              : "bg-success/10 border-b border-success/20 text-success"
-        }`}
+        className={`w-full min-h-8 flex items-center justify-between px-2 sm:px-4 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-colors duration-300 flex-wrap gap-y-0.5 border-b ${toneClasses}`}
       >
         <div className="flex items-center gap-2">
-          {isConnected ? (
+          {status === "connected" ? (
             <Wifi className="w-3.5 h-3.5" />
+          ) : status === "connecting" ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <motion.div
-              animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 1.4, repeat: Infinity }}
             >
               <WifiOff className="w-3.5 h-3.5" />
             </motion.div>
           )}
-          <span>
-            eSSL K30 Pro {isConnected ? "Online" : ""}
-          </span>
-          {!isConnected && reconnectAttempt > 0 && reconnectAttempt < maxReconnectAttempts && (
-            <>
-              <motion.span
-                animate={{ opacity: [1, 0.4, 1] }}
-                transition={{ duration: 1.2, repeat: Infinity }}
-                className="text-destructive"
-              >
-                RECONNECTING...
-              </motion.span>
-              <span className="text-destructive/60 text-[10px]">
-                Attempt {reconnectAttempt}/{maxReconnectAttempts}
-              </span>
-            </>
-          )}
-          {!isConnected && reconnectAttempt >= maxReconnectAttempts && (
-            <>
-              <span className="text-destructive text-[10px] font-black">FAILED</span>
-              {onManualReconnect && (
-                <button
-                  onClick={onManualReconnect}
-                  className="ml-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors"
-                >
-                  Retry
-                </button>
-              )}
-            </>
-          )}
-          {!isConnected && reconnectAttempt === 0 && (
-            <motion.span
-              animate={{ opacity: [1, 0.4, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-              className="text-destructive"
-            >
-              RECONNECTING...
-            </motion.span>
-          )}
+          <span>eSSL Device — {meta.label}</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          {isConnected && deviceIp && (
-            <span className="text-muted-foreground">{deviceIp}</span>
+        <div className="flex items-center gap-2">
+          {deviceIp && <span className="text-muted-foreground font-mono normal-case">{deviceIp}</span>}
+          {(status === "error" || status === "disconnected") && onRetry && (
+            <button
+              onClick={onRetry}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors text-[10px] font-black uppercase tracking-wider"
+            >
+              <RefreshCw className="w-3 h-3" /> Retry
+            </button>
           )}
-          {/* Sparkline */}
-          {isConnected && history.length >= 2 && (
-            <Sparkline data={history} />
-          )}
-          {isConnected && latencyMs != null && (
-            <div className={`flex items-center gap-1 ${getLatencyColor(latencyMs)}`}>
-              <Activity className="w-3 h-3" />
-              <span>{latencyMs}ms</span>
-            </div>
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted/40 text-muted-foreground border border-border hover:bg-muted/60 transition-colors text-[10px] font-black uppercase tracking-wider"
+            >
+              <SettingsIcon className="w-3 h-3" /> Settings
+            </button>
           )}
         </div>
       </div>
 
-      {/* Flash alert banner for disconnect or high latency */}
       <AnimatePresence>
-        {barAlert && (
+        {showAlert && errorMessage && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -216,22 +87,10 @@ export function HardwareStatusBar({
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <motion.div
-              animate={{ opacity: [1, 0.6, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className={`flex items-center justify-center gap-2 py-1.5 text-[11px] font-black uppercase tracking-widest ${
-                !isConnected
-                  ? "bg-destructive/20 text-destructive"
-                  : "bg-warning/20 text-warning"
-              }`}
-            >
+            <div className="flex items-center justify-center gap-2 py-1.5 text-[11px] font-black uppercase tracking-widest bg-destructive/20 text-destructive">
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>
-                {!isConnected
-                  ? "Device disconnected — check network cable"
-                  : `High latency detected (${latencyMs}ms) — performance may be affected`}
-              </span>
-            </motion.div>
+              <span className="normal-case">{errorMessage}</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
