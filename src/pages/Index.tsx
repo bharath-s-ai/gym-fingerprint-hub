@@ -1,18 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { FingerprintScanner } from "@/components/gym/FingerprintScanner";
 import { ModeToggle } from "@/components/gym/ModeToggle";
 import { StatusDisplay, type StatusType } from "@/components/gym/StatusDisplay";
 import { MemberCard } from "@/components/gym/MemberCard";
 import { EnrollmentForm } from "@/components/gym/EnrollmentForm";
-import { DeviceConnectionDialog } from "@/components/gym/DeviceConnectionDialog";
 import { WarriorWelcome } from "@/components/gym/WarriorWelcome";
 import { HardwareStatusBar } from "@/components/gym/HardwareStatusBar";
 import { MemberProfilePanel } from "@/components/gym/MemberProfilePanel";
 import { useFingerprint } from "@/hooks/useFingerprint";
-import { useHardwareDemo } from "@/hooks/useHardwareDemo";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { HiddenAdminCorner, IdleCountdownModal, FullscreenToggle, AlwaysOnTopToggle, AutoStartToggle } from "@/components/gym/KioskControls";
 import { MuteToggle } from "@/components/gym/MuteToggle";
 import { useElectron } from "@/hooks/useElectron";
-import { Fingerprint } from "lucide-react";
+import { Fingerprint, Settings as SettingsIcon, RefreshCw } from "lucide-react";
 import logo from "@/assets/f2f-logo.jpg";
 import { differenceInDays, subDays, format } from "date-fns";
 
@@ -103,7 +102,7 @@ const Index = () => {
   const [isIdle, setIsIdle] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [enrollProgress, setEnrollProgress] = useState(0);
-  const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  const [isSyncingLogs, setIsSyncingLogs] = useState(false);
   // Welcome overlay state
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [welcomeData, setWelcomeData] = useState({ name: "", memberId: null as number | null, daysRemaining: 0, streak: 0, totalVisits: 0 });
@@ -113,9 +112,17 @@ const Index = () => {
 
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const countdownTimer = useRef<ReturnType<typeof setInterval>>();
-  const { initialize, capture, match, connect, autoDetect, isConnected, isHardware, deviceError, latencyMs, reconnectAttempt, retryConnect } = useFingerprint();
-  const demo = useHardwareDemo();
-  const showDemoBar = !isHardware; // show demo bar in browser mode
+  const {
+    status: deviceStatus,
+    error: deviceError,
+    settings: deviceSettings,
+    bridgeReady,
+    isConnected,
+    connect,
+    enroll: enrollOnDevice,
+    verify: verifyOnDevice,
+    fetchLogs,
+  } = useFingerprint();
   const { play, muted, toggleMute } = useSoundEffects();
   const { setTrayStatus } = useElectron();
   const navigate = useNavigate();
@@ -158,14 +165,71 @@ const Index = () => {
     };
   }, [resetIdleTimer]);
 
+  // Auto-connect on mount if device IP is configured & bridge available
   useEffect(() => {
-    initialize()
+    if (!bridgeReady) {
+      setStatus({ message: "Desktop bridge not detected — open the desktop app", type: "warning" });
+      return;
+    }
+    if (!deviceSettings.ip) {
+      setStatus({ message: "Configure device in Settings to begin", type: "warning" });
+      return;
+    }
+    connect()
       .then(() => setStatus({ message: "System ready — select a mode to begin", type: "success" }))
       .catch((err) => {
         setStatus({ message: err.message, type: "error" });
-        if (isHardware) setShowConnectionDialog(true);
+        toast.error(err.message);
       });
-  }, [initialize, isHardware]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridgeReady]);
+
+  // Sync attendance logs from device → Supabase
+  const handleSyncLogs = useCallback(async () => {
+    if (!isConnected) {
+      toast.error("Device not connected");
+      return;
+    }
+    setIsSyncingLogs(true);
+    try {
+      const logs = await fetchLogs();
+      if (logs.length === 0) {
+        toast.info("No new logs on device");
+        return;
+      }
+      // Map device userId → member.id, then insert attendance rows
+      const userIds = [...new Set(logs.map((l) => l.userId))];
+      const { data: members } = await supabase
+        .from("members")
+        .select("id, member_id")
+        .in("member_id", userIds.map((u) => parseInt(u, 10)).filter((n) => !Number.isNaN(n)));
+
+      const idMap = new Map<string, string>();
+      (members || []).forEach((m) => {
+        if (m.member_id != null) idMap.set(String(m.member_id), m.id);
+      });
+
+      const rows = logs
+        .map((l) => {
+          const memberUuid = idMap.get(l.userId);
+          return memberUuid ? { member_id: memberUuid, check_in: l.timestamp } : null;
+        })
+        .filter((r): r is { member_id: string; check_in: string } => r !== null);
+
+      if (rows.length === 0) {
+        toast.warning("Logs found but no matching members");
+        return;
+      }
+
+      const { error } = await supabase.from("attendance").insert(rows);
+      if (error) throw error;
+      toast.success(`Synced ${rows.length} attendance ${rows.length === 1 ? "record" : "records"}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Sync failed");
+    } finally {
+      setIsSyncingLogs(false);
+    }
+  }, [isConnected, fetchLogs]);
 
   // Show welcome overlay with stats
   const showWelcomeOverlay = useCallback(async (matched: Member) => {
@@ -195,6 +259,8 @@ const Index = () => {
     setStatus({ message: "Looking up warrior...", type: "waiting" });
 
     try {
+      if (!isConnected) throw new Error("Device not connected — open Settings");
+
       const { data, error } = await supabase
         .from("members")
         .select("*")
@@ -205,39 +271,32 @@ const Index = () => {
       if (!data) throw new Error("No warrior found with ID #" + warriorId);
 
       setMember(data as Member);
+      setStatus({ message: "Place finger on scanner — 3 samples required", type: "waiting" });
+      setEnrollProgress(1);
 
-      const templates: string[] = [];
-      for (let i = 0; i < 3; i++) {
-        setStatus({ message: `Place finger on scanner (${i + 1}/3)...`, type: "waiting" });
-        setEnrollProgress(i);
-        const template = await capture();
-        templates.push(template);
-        setEnrollProgress(i + 1);
-        play("tap");
-        if (i < 2) {
-          setStatus({ message: `Sample ${i + 1} captured! Lift finger...`, type: "success" });
-          await new Promise((r) => setTimeout(r, 1500));
-        }
-      }
+      // Single device-side enroll call captures all 3 samples internally
+      const template = await enrollOnDevice(warriorId);
+      setEnrollProgress(3);
 
       await supabase
         .from("members")
-        .update({ fingerprint_template: templates[0] })
+        .update({ fingerprint_template: template })
         .eq("id", data.id);
 
       setScannerStatus("success");
-      setEnrollProgress(3);
       play("success");
       setStatus({ message: "Fingerprint enrolled successfully!", type: "success" });
+      toast.success("Fingerprint enrolled");
     } catch (error: any) {
       setScannerStatus("error");
       setEnrollProgress(0);
       play("error");
       setStatus({ message: error.message, type: "error" });
+      toast.error(error.message);
     } finally {
       setIsScanning(false);
     }
-  }, [capture, play]);
+  }, [enrollOnDevice, isConnected, play]);
 
   const handleCheckIn = useCallback(async () => {
     if (isScanning) return;
@@ -249,47 +308,51 @@ const Index = () => {
     setStatus({ message: "Place finger on scanner...", type: "waiting" });
 
     try {
-      const scannedTemplate = await capture();
-      setStatus({ message: "Matching fingerprint...", type: "waiting" });
+      if (!isConnected) throw new Error("Device not connected — open Settings");
 
-      const { data: members } = await supabase
-        .from("members")
-        .select("*")
-        .not("fingerprint_template", "is", null)
-        .eq("active", true);
-
-      let matched: Member | null = null;
-      for (const m of members || []) {
-        const isMatch = await match(scannedTemplate, m.fingerprint_template!);
-        if (isMatch) {
-          matched = m as Member;
-          break;
-        }
-      }
-
-      if (!matched) {
+      const matchedUserId = await verifyOnDevice();
+      if (!matchedUserId) {
         setScannerStatus("error");
         play("error");
         setStatus({ message: "Fingerprint not recognized", type: "error" });
+        toast.error("Fingerprint not recognized");
         setTimeout(() => { setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 3000);
         return;
       }
 
+      setStatus({ message: "Looking up member...", type: "waiting" });
+      const { data: matched } = await supabase
+        .from("members")
+        .select("*")
+        .eq("member_id", parseInt(matchedUserId, 10))
+        .maybeSingle();
+
+      if (!matched) {
+        setScannerStatus("error");
+        play("error");
+        setStatus({ message: "Member record not found", type: "error" });
+        toast.error("Member record not found");
+        setTimeout(() => { setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 3000);
+        return;
+      }
+
+      const memberRow = matched as Member;
+
       // Fetch stats for card display
       const [totalVisits, lastCheckIn, streak] = await Promise.all([
-        getTotalVisits(matched.id),
-        getLastCheckIn(matched.id),
-        computeStreak(matched.id),
+        getTotalVisits(memberRow.id),
+        getLastCheckIn(memberRow.id),
+        computeStreak(memberRow.id),
       ]);
       setMemberStats({ totalVisits, lastCheckIn, streak });
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const isExpired = new Date(matched.expiry_date) < new Date();
+      const isExpired = new Date(memberRow.expiry_date) < new Date();
 
-      if (isExpired || !matched.active) {
+      if (isExpired || !memberRow.active) {
         setScannerStatus("error");
-        setMember(matched);
+        setMember(memberRow);
         play("error");
         setStatus({ message: "Membership expired — renew at front desk", type: "error" });
         setTimeout(() => { setMember(null); setScannerStatus("idle"); setStatus({ message: "Ready for check-in", type: "info" }); }, 5000);
@@ -299,7 +362,7 @@ const Index = () => {
       const { data: existing } = await supabase
         .from("attendance")
         .select("*")
-        .eq("member_id", matched.id)
+        .eq("member_id", memberRow.id)
         .gte("check_in", today.toISOString())
         .maybeSingle();
 
@@ -328,7 +391,7 @@ const Index = () => {
     } finally {
       setIsScanning(false);
     }
-  }, [isScanning, capture, match, play, showWelcomeOverlay]);
+  }, [isScanning, verifyOnDevice, isConnected, play, showWelcomeOverlay]);
 
   // Idle screen
   if (isIdle) {
@@ -413,26 +476,18 @@ const Index = () => {
         onClose={() => setProfileMember(null)}
         onUpdate={() => setProfileMember(null)}
       />
-      <DeviceConnectionDialog
-        open={showConnectionDialog}
-        onOpenChange={setShowConnectionDialog}
-        onConnect={async (ip, port) => { await connect(ip, port); }}
-        onAutoDetect={async () => autoDetect()}
-        error={deviceError}
-      />
 
       {/* Hardware Status Bar */}
       <HardwareStatusBar
-        isHardware={isHardware || showDemoBar}
-        isConnected={isHardware ? isConnected : demo.isConnected}
-        deviceIp="192.168.1.201"
-        latencyMs={isHardware ? latencyMs : demo.latencyMs}
-        reconnectAttempt={isHardware ? reconnectAttempt : demo.reconnectAttempt}
-        maxReconnectAttempts={isHardware ? 10 : demo.maxReconnectAttempts}
-        onHighLatency={() => play("warning")}
-        onDisconnect={() => play("error")}
-        onManualReconnect={isHardware ? retryConnect : demo.retryConnect}
+        status={deviceStatus}
+        deviceIp={deviceSettings.ip || undefined}
+        errorMessage={deviceError}
+        onRetry={() => {
+          connect().catch((e) => toast.error(e?.message ?? "Connection failed"));
+        }}
+        onOpenSettings={() => navigate("/settings")}
       />
+
 
       <div className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10">
         <motion.div
@@ -502,6 +557,17 @@ const Index = () => {
               </Button>
             )}
 
+            {/* Sync attendance logs from device */}
+            <Button
+              onClick={handleSyncLogs}
+              disabled={isSyncingLogs || !isConnected}
+              variant="outline"
+              className="w-full gap-2 font-bold uppercase tracking-wider"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncingLogs ? "animate-spin" : ""}`} />
+              {isSyncingLogs ? "Syncing..." : "Sync Device Logs"}
+            </Button>
+
             <AnimatePresence>
               {member && (
                 <div className="cursor-pointer" onClick={() => setProfileMember(member)}>
@@ -517,10 +583,14 @@ const Index = () => {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-primary/10 px-5 py-3.5 flex items-center justify-center">
+          <div className="border-t border-primary/10 px-5 py-3.5 flex items-center justify-between gap-3">
             <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-[0.2em] hover:text-primary transition-colors duration-200">
               <span>📊</span>
-              <span>Member Dashboard</span>
+              <span>Dashboard</span>
+            </Link>
+            <Link to="/settings" className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-[0.2em] hover:text-primary transition-colors duration-200">
+              <SettingsIcon className="w-3.5 h-3.5" />
+              <span>Settings</span>
             </Link>
           </div>
         </motion.div>
